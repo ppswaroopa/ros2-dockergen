@@ -1,0 +1,22 @@
+# Docker
+.docker/
+.devcontainer/.*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ROS 2 build artifacts
+build/
+install/
+log/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
