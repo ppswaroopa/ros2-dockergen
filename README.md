@@ -19,7 +19,17 @@ launch_tb3_nav2.sh   ← one-shot simulation launcher
 
 ## Getting Started
 
-**1. Build and enter the container**
+### Option A: Use the pre-built image (Fastest)
+
+If you just want to run the environment without building anything locally:
+
+```bash
+docker pull ppswaroopa/ros2-humble-playground:latest
+docker-compose up -d
+docker exec -it ros2_playground bash
+```
+
+### Option B: Build from source
 
 ```bash
 # from the project root
@@ -27,7 +37,7 @@ docker-compose up --build -d
 docker exec -it ros2_playground bash
 ```
 
-**2. Launch the reference simulation (TurtleBot3 + Nav2)**
+**1. Launch the reference simulation (TurtleBot3 + Nav2)**
 
 ```bash
 # inside the container
@@ -65,6 +75,15 @@ This gives you full `rclcpp` / `rclpy` IntelliSense with zero configuration, and
 | Connection refused / denied | Ensure VcXsrv is running with *Disable access control* checked. |
 | GUI not rendering | Run `glxgears` inside the container to test the X11 bridge. |
 
-## License
+## 🛠️ Maintainer: Pushing to Docker Hub
 
-MIT — see [LICENSE](LICENSE).
+To update the public image after making changes to the `Dockerfile`:
+
+1.  **Login**: `docker login`
+2.  **Build**: `docker-compose build`
+3.  **Push**: `docker push ppswaroopa/ros2-humble-playground:latest`
+
+---
+
+## License
+MIT - [LICENSE](LICENSE).

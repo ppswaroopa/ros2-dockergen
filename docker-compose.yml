@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ros2-humble-playground:latest
+    image: ppswaroopa/ros2-humble-playground:latest
     container_name: ros2_playground
     network_mode: host
     ipc: host
