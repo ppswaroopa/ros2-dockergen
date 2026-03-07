@@ -18,7 +18,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - .:/home/rosuser/ros2_ws/src/playground:rw
+      - ./src:/home/rosuser/ros2_ws/src:rw
     stdin_open: true
     tty: true
     command: bash

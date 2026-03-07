@@ -1,0 +1,21 @@
+{
+    "name": "ROS 2 Humble Playground",
+    "dockerComposeFile": [
+        "../docker-compose.yml"
+    ],
+    "service": "ros2-humble",
+    "workspaceFolder": "/home/rosuser/ros2_ws",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-python.python",
+                "twxs.cmake",
+                "ethan-halsall.cpp-check",
+                "redhat.vscode-yaml"
+            ]
+        }
+    },
+    "remoteUser": "rosuser",
+    "postCreateCommand": "sudo apt update && rosdep update"
+}
