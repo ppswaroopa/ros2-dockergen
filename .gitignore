@@ -1,22 +1,11 @@
-# Docker
-.docker/
-.devcontainer/.*.log
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-
-# ROS 2 build artifacts
-build/
-install/
-log/
-
-# IDEs
+# IDEs and OS
 .vscode/
 .idea/
-*.swp
-
-# OS
 .DS_Store
 Thumbs.db
+*.swp
+
+# Node / Web (for the upcoming generator)
+node_modules/
+dist/
+.env
