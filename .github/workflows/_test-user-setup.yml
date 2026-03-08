@@ -40,7 +40,7 @@ jobs:
 
       - name: Generate Dockerfile (custom user, sudo enabled)
         run: |
-          node ci/generate.js \
+          node ros2-docker-generator/generate.js \
             --distro   humble \
             --variant  ros-base \
             --tools    "bashrc,locale,sudo" \
@@ -86,7 +86,7 @@ jobs:
             -e EXPECTED_USER=ros-dev \
             -e EXPECTED_UID=1000 \
             -e EXPECT_SUDO=true \
-            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/ros2-docker-generator/validate.sh:/validate.sh:ro" \
             ros2-test-user-custom:ci \
             bash /validate.sh
 
@@ -102,7 +102,7 @@ jobs:
 
       - name: Generate Dockerfile (root user)
         run: |
-          node ci/generate.js \
+          node ros2-docker-generator/generate.js \
             --distro   humble \
             --variant  ros-base \
             --tools    "bashrc,locale" \
@@ -144,6 +144,6 @@ jobs:
             -e ROS_DISTRO=humble \
             -e CI_TEST_SUITE=user \
             -e EXPECTED_USER=root \
-            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/ros2-docker-generator/validate.sh:/validate.sh:ro" \
             ros2-test-user-root:ci \
             bash /validate.sh

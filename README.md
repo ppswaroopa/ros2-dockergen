@@ -2,12 +2,16 @@
 
 A collection of tools and environments for ROS 2 development.
 
-## Projects
+## Tools
 
-- **[Interactive Portfolio & Tools](./index.html)**: The main entry point for the ROS 2 Playground web applications.
-- **[ROS 2 Docker Generator](./ros2-docker-generator.html)**: A web-based tool for generating custom ROS 2 Dockerfiles.
-- **[Reference Container](./reference-container)**: A pre-configured Docker environment for ROS 2 Humble, optimized for simulations and development.
+- **[ROS 2 Docker Generator](./index.html)**: A web-based tool for generating custom, optimized ROS 2 Dockerfiles and Compose configurations.
+- **[Reference Container](./reference-container)**: A pre-configured development environment for ROS 2 Humble with TB3 & Nav2 support.
 
-## Documentation
+## Project Structure
 
-- **[CI Pipeline & Testing](./README_CI.md)**: Details on the automated testing suite and how to run tests locally.
+- `ros2-docker-generator/`: Contains the logic, generation scripts, and validation suite for the Docker generator.
+- `reference-container/`: A standalone Dockerized ROS 2 development environment.
+- `.github/workflows/`: Automated CI pipeline that validates the generator across multiple distros and configurations.
+
+---
+*Maintained by Pranava Swaroopa*

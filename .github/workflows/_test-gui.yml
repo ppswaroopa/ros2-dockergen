@@ -56,7 +56,7 @@ jobs:
 
       - name: Generate Dockerfile (desktop + RViz2 + Gazebo)
         run: |
-          node ci/generate.js \
+          node ros2-docker-generator/generate.js \
             --distro    "${{ inputs.distro }}" \
             --variant   "desktop" \
             --packages  "rviz2,gazebo" \
@@ -102,6 +102,6 @@ jobs:
             -e DISPLAY=":99" \
             -e CI_TEST_SUITE=gui \
             -v /tmp/.X11-unix:/tmp/.X11-unix \
-            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/ros2-docker-generator/validate.sh:/validate.sh:ro" \
             ros2-test-gui-${{ inputs.distro }}:ci \
             bash /validate.sh

@@ -8,7 +8,7 @@
 # verify them on one distro (humble/ros-base). If apt can find
 # the package and install it, the generated Dockerfile is correct.
 #
-# Only re-runs when ci/generate.js changes (package names) or
+# Only re-runs when ros2-docker-generator/generate.js changes (package names) or
 # this workflow file changes.
 #
 # What it proves:
@@ -43,7 +43,7 @@ jobs:
 
       - name: Generate Dockerfile (all build tools enabled)
         run: |
-          node ci/generate.js \
+          node ros2-docker-generator/generate.js \
             --distro   "${{ inputs.distro }}" \
             --variant  "ros-base" \
             --tools    "colcon,rosdep,python3,git,cmake,vcstool,bashrc,locale,sudo" \
@@ -86,6 +86,6 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO="${{ inputs.distro }}" \
             -e CI_TEST_SUITE=build-tools \
-            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/ros2-docker-generator/validate.sh:/validate.sh:ro" \
             ros2-test-tools-${{ inputs.distro }}:ci \
             bash /validate.sh

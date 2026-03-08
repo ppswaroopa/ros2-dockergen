@@ -13,7 +13,7 @@ Live at: `https://<username>.github.io`
 .
 │   .gitignore
 │   index.html                          # Portfolio landing page
-│   ros2-docker-generator.html          # ROS2 Docker Generator — standalone tool
+│   index.html          # ROS2 Docker Generator — standalone tool
 │
 ├── src/
 │   ├── css/
@@ -24,7 +24,7 @@ Live at: `https://<username>.github.io`
 │   ├── font/                           # Custom fonts
 │   └── documents/                      # CV and presentation PDFs
 │
-├── ci/
+├── ros2-docker-generator/
 │   ├── generate.js                     # Dockerfile + Compose generation logic (Node.js, no deps)
 │   └── validate.sh                     # Runs inside each built container to verify correctness
 │
@@ -38,14 +38,14 @@ Live at: `https://<username>.github.io`
         └── _test-nvidia.yml            # Tests CUDA base image + ROS2 on top
 ```
 
-The `ci/` folder and `.github/` workflows relate exclusively to testing `ros2-docker-generator.html`.
+The `ros2-docker-generator/` folder and `.github/` workflows relate exclusively to testing `index.html`.
 The rest of the portfolio (`index.html`, `src/`) is static and has no CI.
 
 ---
 
 ## The ROS2 Docker Generator
 
-`ros2-docker-generator.html` is a fully self-contained single-page app — no build step,
+`index.html` is a fully self-contained single-page app — no build step,
 no backend, no dependencies. It generates files entirely in the browser using JavaScript.
 Nothing is sent to any server.
 
@@ -56,12 +56,12 @@ Windows users using WSL2.
 
 ### How it links from the portfolio
 
-`index.html` links to `ros2-docker-generator.html` as a project entry. Both files sit at the
+`index.html` links to `index.html` as a project entry. Both files sit at the
 repo root so GitHub Pages serves them both at the same base URL:
 
 ```
 https://<username>.github.io/index.html                    ← portfolio
-https://<username>.github.io/ros2-docker-generator.html    ← generator tool
+https://<username>.github.io/index.html    ← generator tool
 ```
 
 ---
@@ -98,9 +98,9 @@ detect which files changed in the push. Downstream jobs only run if their releva
 
 | Files changed in the push | Jobs that run |
 |---|---|
-| `ros2-docker-generator.html` or `index.html` | `base-humble` smoke check only |
-| `ci/generate.js` | All suites — generation logic changed, everything must re-verify |
-| `ci/validate.sh` | All suites — the validator itself changed |
+| `index.html` or `index.html` | `base-humble` smoke check only |
+| `ros2-docker-generator/generate.js` | All suites — generation logic changed, everything must re-verify |
+| `ros2-docker-generator/validate.sh` | All suites — the validator itself changed |
 | `.github/workflows/_test-nvidia.yml` only | `nvidia` only |
 | `.github/workflows/_test-user-setup.yml` only | `user-setup` only |
 
@@ -126,7 +126,7 @@ entrypoint." GitHub treats it identically to any other workflow file.
 
 ### validate.sh — One Script, Five Modes
 
-`ci/validate.sh` reads a `CI_TEST_SUITE` environment variable and runs only the checks
+`ros2-docker-generator/validate.sh` reads a `CI_TEST_SUITE` environment variable and runs only the checks
 relevant to that concern. Each job passes a different value:
 
 ```bash
@@ -213,7 +213,7 @@ If you just want to test one thing quickly without act's overhead:
 
 ```bash
 # 1. Generate the Dockerfile for the config you want to test
-node ci/generate.js \
+node ros2-docker-generator/generate.js \
   --distro   humble \
   --variant  ros-base \
   --tools    "colcon,rosdep,python3,git,bashrc,locale,sudo" \
@@ -228,7 +228,7 @@ docker build -t ros2-test:local ./build-context
 docker run --rm \
   -e ROS_DISTRO=humble \
   -e CI_TEST_SUITE=base \
-  -v "$PWD/ci/validate.sh:/validate.sh:ro" \
+  -v "$PWD/ros2-docker-generator/validate.sh:/validate.sh:ro" \
   ros2-test:local bash /validate.sh
 
 # User suite (custom user)
@@ -238,14 +238,14 @@ docker run --rm \
   -e EXPECTED_USER=ros-dev \
   -e EXPECTED_UID=1000 \
   -e EXPECT_SUDO=true \
-  -v "$PWD/ci/validate.sh:/validate.sh:ro" \
+  -v "$PWD/ros2-docker-generator/validate.sh:/validate.sh:ro" \
   ros2-test:local bash /validate.sh
 
 # Build tools suite
 docker run --rm \
   -e ROS_DISTRO=humble \
   -e CI_TEST_SUITE=build-tools \
-  -v "$PWD/ci/validate.sh:/validate.sh:ro" \
+  -v "$PWD/ros2-docker-generator/validate.sh:/validate.sh:ro" \
   ros2-test:local bash /validate.sh
 ```
 
@@ -267,10 +267,10 @@ docker run --rm \
 When you add a new package option, you must update **two places** — the UI and the CI
 generator. They implement the same logic independently (see Known Limitations below).
 
-1. **`ros2-docker-generator.html`** — add the option card in the packages step and add
+1. **`index.html`** — add the option card in the packages step and add
    the entry to the `rosPkgMap` object in the `buildDockerfile()` function.
 
-2. **`ci/generate.js`** — add the same entry to the `getRosPackages()` function.
+2. **`ros2-docker-generator/generate.js`** — add the same entry to the `getRosPackages()` function.
 
 Before committing, verify the apt package name actually exists for each distro you support:
 
@@ -308,9 +308,9 @@ page is as simple as dropping another `.html` file in the root and linking to it
 ## Known Limitations
 
 **Duplicate generation logic** — The Dockerfile generation logic exists in both
-`ros2-docker-generator.html` and `ci/generate.js`. A fix to a package name must be
+`index.html` and `ros2-docker-generator/generate.js`. A fix to a package name must be
 applied in both files. The long-term fix is to extract the shared logic into a
-`ci/generate.js` module that `ros2-docker-generator.html` loads via a `<script src>` tag.
+`ros2-docker-generator/generate.js` module that `index.html` loads via a `<script src>` tag.
 This is deferred because it would require either a build step or a web server for local
 development (browsers block local `file://` script imports by default).
 
