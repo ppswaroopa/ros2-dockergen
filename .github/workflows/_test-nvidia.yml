@@ -1,0 +1,94 @@
+# =============================================================
+# .github/workflows/_test-nvidia.yml
+# Reusable workflow — tests the NVIDIA/CUDA base image path.
+#
+# GitHub Actions runners do not have GPUs. We cannot test that
+# CUDA actually works. What we CAN test:
+#   - The CUDA base image exists and pulls successfully
+#   - ROS2 installs correctly on top of it (the manual apt key setup)
+#   - The NVIDIA env vars are set correctly in the image
+#   - nvidia-smi is present (will fail to run, but the binary exists)
+#
+# This is enough to know the Dockerfile is correct. A user with
+# an actual NVIDIA GPU will get a working container — we're just
+# verifying the build-time steps, not runtime GPU access.
+#
+# This test is intentionally separate because:
+#   1. Different base image (nvidia/cuda vs osrf/ros)
+#   2. Different ROS2 installation method (manual apt key)
+#   3. Slow — cuda base image is large
+#   4. Only relevant when user selects CUDA — no point running
+#      it on every push if no CUDA-related files changed
+# =============================================================
+
+name: _test-nvidia
+
+on:
+  workflow_call:
+    inputs:
+      distro:
+        required: false
+        type: string
+        default: humble
+
+jobs:
+  test-nvidia:
+    name: "nvidia · ${{ inputs.distro }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate Dockerfile (CUDA enabled)
+        run: |
+          node ci/generate.js \
+            --distro   "${{ inputs.distro }}" \
+            --variant  "ros-base" \
+            --packages "cuda" \
+            --tools    "bashrc,locale,sudo,python3,colcon" \
+            --username ros-dev \
+            --uid      1000 \
+            --out      ./build-context
+
+      - name: Show Dockerfile
+        run: cat ./build-context/Dockerfile
+
+      - name: Validate Compose YAML
+        run: docker compose -f ./build-context/docker-compose.yml config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      # NVIDIA base image is large (~6GB) — cache is especially important here
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-nvidia-${{ inputs.distro }}-${{ hashFiles('build-context/Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-nvidia-${{ inputs.distro }}-
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./build-context
+          push: false
+          load: true
+          tags: ros2-test-nvidia-${{ inputs.distro }}:ci
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to:   type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Rotate cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Validate NVIDIA build
+        run: |
+          docker run --rm \
+            -e ROS_DISTRO="${{ inputs.distro }}" \
+            -e CI_TEST_SUITE=nvidia \
+            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            ros2-test-nvidia-${{ inputs.distro }}:ci \
+            bash /validate.sh

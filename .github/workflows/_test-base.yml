@@ -1,0 +1,87 @@
+# =============================================================
+# .github/workflows/_test-base.yml
+# Reusable workflow — tests that a given distro's base image
+# builds correctly and ROS2 is functional.
+#
+# Called by the main workflow. The leading underscore marks it
+# as an internal/reusable workflow by convention.
+#
+# What it proves:
+#   - The correct Docker image tag exists on Docker Hub
+#   - setup.bash is present and sources without error
+#   - ros2 CLI is executable and returns a version
+#   - .bashrc has setup.bash sourced exactly once
+#   - The workspace directory was created
+# =============================================================
+
+name: _test-base
+
+on:
+  workflow_call:
+    inputs:
+      distro:
+        required: true
+        type: string   # humble | jazzy | iron
+      variant:
+        required: true
+        type: string   # ros-base | desktop | desktop-full
+
+jobs:
+  test-base:
+    name: "base · ${{ inputs.distro }}/${{ inputs.variant }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate Dockerfile
+        run: |
+          node ci/generate.js \
+            --distro   "${{ inputs.distro }}" \
+            --variant  "${{ inputs.variant }}" \
+            --tools    "bashrc,locale,sudo" \
+            --username ros-dev \
+            --uid      1000 \
+            --out      ./build-context
+
+      - name: Show Dockerfile
+        run: cat ./build-context/Dockerfile
+
+      - name: Validate Compose YAML
+        run: docker compose -f ./build-context/docker-compose.yml config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-base-${{ inputs.distro }}-${{ inputs.variant }}-${{ hashFiles('build-context/Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-base-${{ inputs.distro }}-${{ inputs.variant }}-
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./build-context
+          push: false
+          load: true
+          tags: ros2-test-base-${{ inputs.distro }}-${{ inputs.variant }}:ci
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to:   type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Rotate cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Validate base
+        run: |
+          docker run --rm \
+            -e ROS_DISTRO="${{ inputs.distro }}" \
+            -e CI_TEST_SUITE=base \
+            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            ros2-test-base-${{ inputs.distro }}-${{ inputs.variant }}:ci \
+            bash /validate.sh

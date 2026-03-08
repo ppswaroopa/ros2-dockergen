@@ -1,0 +1,91 @@
+# =============================================================
+# .github/workflows/_test-build-tools.yml
+# Reusable workflow — tests that build tool apt packages install
+# cleanly and the tools are actually callable.
+#
+# Key insight: build tools are just apt-get install lines.
+# The commands are identical across distros. We only need to
+# verify them on one distro (humble/ros-base). If apt can find
+# the package and install it, the generated Dockerfile is correct.
+#
+# Only re-runs when ci/generate.js changes (package names) or
+# this workflow file changes.
+#
+# What it proves:
+#   - colcon is installed and callable
+#   - rosdep is installed, init succeeds, update succeeds
+#   - python3 + pip are present
+#   - git is present
+#   - cmake / build-essential compile a trivial C++ file
+#   - vcstool is present (if enabled)
+# =============================================================
+
+name: _test-build-tools
+
+on:
+  workflow_call:
+    inputs:
+      distro:
+        required: false
+        type: string
+        default: humble    # run on humble — representative of all distros
+
+jobs:
+  test-build-tools:
+    name: "build-tools · ${{ inputs.distro }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate Dockerfile (all build tools enabled)
+        run: |
+          node ci/generate.js \
+            --distro   "${{ inputs.distro }}" \
+            --variant  "ros-base" \
+            --tools    "colcon,rosdep,python3,git,cmake,vcstool,bashrc,locale,sudo" \
+            --username ros-dev \
+            --uid      1000 \
+            --out      ./build-context
+
+      - name: Show Dockerfile
+        run: cat ./build-context/Dockerfile
+
+      - name: Validate Compose YAML
+        run: docker compose -f ./build-context/docker-compose.yml config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-tools-${{ inputs.distro }}-${{ hashFiles('build-context/Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-tools-${{ inputs.distro }}-
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./build-context
+          push: false
+          load: true
+          tags: ros2-test-tools-${{ inputs.distro }}:ci
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to:   type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Rotate cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Validate build tools
+        run: |
+          docker run --rm \
+            -e ROS_DISTRO="${{ inputs.distro }}" \
+            -e CI_TEST_SUITE=build-tools \
+            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            ros2-test-tools-${{ inputs.distro }}:ci \
+            bash /validate.sh

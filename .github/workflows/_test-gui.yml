@@ -1,0 +1,107 @@
+# =============================================================
+# .github/workflows/_test-gui.yml
+# Reusable workflow — tests GUI ROS2 packages (RViz2, Gazebo).
+#
+# GUI apps need a display to launch, even in CI. We use Xvfb
+# (X Virtual Framebuffer) on the runner to provide a fake
+# display. This lets us verify:
+#   - The packages installed correctly
+#   - The binaries exist and are executable
+#   - They don't immediately crash on startup (import check)
+#
+# We do NOT test that rendering works — that would need a GPU.
+# We test that the software is installed and launchable.
+#
+# Key insight: if rviz2 and gazebo install and their binaries
+# exist, the Dockerfile commands are correct. The same apt
+# package names work the same on humble and jazzy (or we'd
+# catch it here). One test run covers all distros for this layer.
+#
+# What it proves:
+#   - rviz2 binary exists and is executable
+#   - gazebo / gz binary exists and is executable
+#   - ros2 launch can find the gui package
+#   - DISPLAY env var is set in the container
+# =============================================================
+
+name: _test-gui
+
+on:
+  workflow_call:
+    inputs:
+      distro:
+        required: false
+        type: string
+        default: humble
+
+jobs:
+  test-gui:
+    name: "gui · ${{ inputs.distro }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Xvfb provides a virtual display so GUI binaries can start
+      - name: Start Xvfb virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1024x768x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+          sleep 1   # give Xvfb time to start
+
+      - name: Generate Dockerfile (desktop + RViz2 + Gazebo)
+        run: |
+          node ci/generate.js \
+            --distro    "${{ inputs.distro }}" \
+            --variant   "desktop" \
+            --packages  "rviz2,gazebo" \
+            --tools     "bashrc,locale,sudo,x11" \
+            --username  ros-dev \
+            --uid       1000 \
+            --out       ./build-context
+
+      - name: Show Dockerfile
+        run: cat ./build-context/Dockerfile
+
+      - name: Validate Compose YAML
+        run: docker compose -f ./build-context/docker-compose.yml config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-gui-${{ inputs.distro }}-${{ hashFiles('build-context/Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-gui-${{ inputs.distro }}-
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./build-context
+          push: false
+          load: true
+          tags: ros2-test-gui-${{ inputs.distro }}:ci
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to:   type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Rotate cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Validate GUI packages
+        run: |
+          docker run --rm \
+            -e ROS_DISTRO="${{ inputs.distro }}" \
+            -e DISPLAY=":99" \
+            -e CI_TEST_SUITE=gui \
+            -v /tmp/.X11-unix:/tmp/.X11-unix \
+            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            ros2-test-gui-${{ inputs.distro }}:ci \
+            bash /validate.sh

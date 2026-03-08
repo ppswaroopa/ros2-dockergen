@@ -1,0 +1,149 @@
+# =============================================================
+# .github/workflows/_test-user-setup.yml
+# Reusable workflow — tests user creation logic.
+#
+# Only 2 meaningful cases exist:
+#   1. root   — no user created, runs as root
+#   2. custom — named user with configurable UID, optional sudo
+#
+# Once these two cases pass, user setup is correct for ALL
+# distro/package combinations. No need to repeat this per distro.
+#
+# What it proves (custom user):
+#   - User exists with correct name
+#   - User UID matches ARG UID
+#   - Home directory was created
+#   - Workspace directory exists and is owned by the user
+#   - sudo works without password (when enabled)
+#   - Cannot accidentally write to /root as non-root
+#
+# What it proves (root):
+#   - whoami returns root
+#   - Workspace was created
+# =============================================================
+
+name: _test-user-setup
+
+on:
+  workflow_call: {}   # no inputs — user logic is distro-independent
+
+jobs:
+  test-custom-user:
+    name: "user · custom (ros-dev, uid=1000, sudo)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate Dockerfile (custom user, sudo enabled)
+        run: |
+          node ci/generate.js \
+            --distro   humble \
+            --variant  ros-base \
+            --tools    "bashrc,locale,sudo" \
+            --usertype custom \
+            --username ros-dev \
+            --uid      1000 \
+            --out      ./build-context
+
+      - name: Show Dockerfile
+        run: cat ./build-context/Dockerfile
+
+      - name: Validate Compose YAML
+        run: docker compose -f ./build-context/docker-compose.yml config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-user-custom-${{ hashFiles('build-context/Dockerfile') }}
+          restore-keys: ${{ runner.os }}-user-custom-
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./build-context
+          push: false
+          load: true
+          tags: ros2-test-user-custom:ci
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to:   type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Rotate cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Validate custom user
+        run: |
+          docker run --rm \
+            -e ROS_DISTRO=humble \
+            -e CI_TEST_SUITE=user \
+            -e EXPECTED_USER=ros-dev \
+            -e EXPECTED_UID=1000 \
+            -e EXPECT_SUDO=true \
+            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            ros2-test-user-custom:ci \
+            bash /validate.sh
+
+  test-root-user:
+    name: "user · root"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate Dockerfile (root user)
+        run: |
+          node ci/generate.js \
+            --distro   humble \
+            --variant  ros-base \
+            --tools    "bashrc,locale" \
+            --usertype root \
+            --out      ./build-context
+
+      - name: Show Dockerfile
+        run: cat ./build-context/Dockerfile
+
+      - name: Validate Compose YAML
+        run: docker compose -f ./build-context/docker-compose.yml config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-user-root-${{ hashFiles('build-context/Dockerfile') }}
+          restore-keys: ${{ runner.os }}-user-root-
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./build-context
+          push: false
+          load: true
+          tags: ros2-test-user-root:ci
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to:   type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Rotate cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Validate root user
+        run: |
+          docker run --rm \
+            -e ROS_DISTRO=humble \
+            -e CI_TEST_SUITE=user \
+            -e EXPECTED_USER=root \
+            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            ros2-test-user-root:ci \
+            bash /validate.sh

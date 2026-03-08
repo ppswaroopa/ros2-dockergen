@@ -1,0 +1,266 @@
+# =============================================================
+# .github/workflows/ci.yml
+# Main CI orchestrator.
+#
+# Calls focused reusable workflows (_test-*.yml) based on what
+# actually changed in the push. Each workflow tests one concern:
+#
+#   _test-base        → distro switch (runs per distro, fast)
+#   _test-build-tools → apt install lines (runs once)
+#   _test-user-setup  → user creation (runs once, 2 cases)
+#   _test-gui         → GUI packages with Xvfb (runs once)
+#   _test-nvidia      → CUDA base image (only on relevant changes)
+#
+# Path filters decide which jobs run:
+#   Any change to ci/generate.js → everything runs
+#   Change to only index.html    → only base runs (smoke check)
+#   Change to _test-nvidia.yml   → only nvidia runs
+#
+# This means a typical "fix a typo in the README" push runs
+# in ~2 minutes instead of 45 minutes.
+# =============================================================
+
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      run_all:
+        description: 'Force all test suites to run'
+        type: boolean
+        default: false
+
+# ── Determine which files changed ─────────────────────────────
+# We use a dedicated job to compute path filters, then downstream
+# jobs check its outputs to decide whether to run.
+jobs:
+  changes:
+    name: Detect changed files
+    runs-on: ubuntu-latest
+    outputs:
+      generator:  ${{ steps.filter.outputs.generator }}
+      user_setup: ${{ steps.filter.outputs.user_setup }}
+      gui:        ${{ steps.filter.outputs.gui }}
+      nvidia:     ${{ steps.filter.outputs.nvidia }}
+      any:        ${{ steps.filter.outputs.any }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            generator:
+              - 'ci/generate.js'
+              - 'ci/validate.sh'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/_test-base.yml'
+            user_setup:
+              - 'ci/generate.js'
+              - 'ci/validate.sh'
+              - '.github/workflows/_test-user-setup.yml'
+            gui:
+              - 'ci/generate.js'
+              - 'ci/validate.sh'
+              - '.github/workflows/_test-gui.yml'
+            nvidia:
+              - 'ci/generate.js'
+              - 'ci/validate.sh'
+              - '.github/workflows/_test-nvidia.yml'
+            any:
+              - 'ci/**'
+              - '.github/workflows/**'
+              - 'ros2-docker-generator.html'
+              - 'index.html'
+              - 'README.md'
+
+  # ── Base image — runs per distro ────────────────────────────
+  # Re-runs when generate.js changes or on workflow_dispatch.
+  # Humble and Jazzy are tested independently because their
+  # apt package names can differ.
+  base-humble:
+    name: "Base · Humble"
+    needs: changes
+    if: |
+      needs.changes.outputs.generator == 'true' ||
+      github.event.inputs.run_all == 'true' ||
+      github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/_test-base.yml
+    with:
+      distro: humble
+      variant: ros-base
+
+  base-humble-desktop:
+    name: "Base · Humble / desktop"
+    needs: changes
+    if: |
+      needs.changes.outputs.generator == 'true' ||
+      github.event.inputs.run_all == 'true'
+    uses: ./.github/workflows/_test-base.yml
+    with:
+      distro: humble
+      variant: desktop
+
+  base-jazzy:
+    name: "Base · Jazzy"
+    needs: changes
+    if: |
+      needs.changes.outputs.generator == 'true' ||
+      github.event.inputs.run_all == 'true' ||
+      github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/_test-base.yml
+    with:
+      distro: jazzy
+      variant: ros-base
+
+  # ── Build tools — runs once, not per distro ─────────────────
+  # apt install lines are structurally identical across distros.
+  # Verify on humble; if the package names were wrong for jazzy,
+  # the base-jazzy job above would catch it.
+  build-tools:
+    name: "Build Tools"
+    needs: changes
+    if: |
+      needs.changes.outputs.generator == 'true' ||
+      github.event.inputs.run_all == 'true'
+    uses: ./.github/workflows/_test-build-tools.yml
+    with:
+      distro: humble
+
+  # ── User setup — runs once, 2 cases internally ──────────────
+  # root vs custom user. Distro-independent — same RUN commands.
+  user-setup:
+    name: "User Setup"
+    needs: changes
+    if: |
+      needs.changes.outputs.user_setup == 'true' ||
+      github.event.inputs.run_all == 'true'
+    uses: ./.github/workflows/_test-user-setup.yml
+
+  # ── GUI packages — runs once with Xvfb ──────────────────────
+  # Xvfb provides a virtual display. Tests binary presence and
+  # that packages install without apt conflicts.
+  gui:
+    name: "GUI Packages"
+    needs: changes
+    if: |
+      needs.changes.outputs.gui == 'true' ||
+      github.event.inputs.run_all == 'true'
+    uses: ./.github/workflows/_test-gui.yml
+    with:
+      distro: humble
+
+  # ── NVIDIA — only when NVIDIA-related files change ───────────
+  # Skipped on normal pushes unless generate.js or the nvidia
+  # workflow itself was modified. This keeps CI fast day-to-day
+  # since the CUDA base image is ~6GB.
+  nvidia:
+    name: "NVIDIA / CUDA"
+    needs: changes
+    if: |
+      needs.changes.outputs.nvidia == 'true' ||
+      github.event.inputs.run_all == 'true'
+    uses: ./.github/workflows/_test-nvidia.yml
+    with:
+      distro: humble
+
+  # ── Kitchen Sink — Tests ALL packages and tools at once ──────
+  # Ensures there are no apt-get conflicts between various tools
+  # or ROS2 packages (e.g. RMW conflicts or GUI lib overlaps).
+  kitchen-sink:
+    name: "Kitchen Sink (All tools/pkgs)"
+    needs: changes
+    if: |
+      needs.changes.outputs.generator == 'true' ||
+      github.event.inputs.run_all == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Generate Dockerfile (The Everything Config)
+        run: |
+          node ci/generate.js \
+            --distro   humble \
+            --variant  desktop-full \
+            --packages "nav2,slam_toolbox,cartographer,gazebo,rviz2,turtlebot3,moveit2,ros2_control,pcl,cv_bridge,tf2,cyclone_dds" \
+            --tools    "colcon,rosdep,python3,git,cmake,nano,tmux,gdb,net_tools,vcstool,ssh,x11,zsh,bashrc,locale,sudo" \
+            --username ros-dev \
+            --uid      1000 \
+            --out      ./build-context
+      - name: Validate Compose YAML
+        run: docker compose -f ./build-context/docker-compose.yml config --quiet
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./build-context
+          push: false
+          load: true
+          tags: ros2-kitchen-sink:ci
+      - name: Validate
+        run: |
+          docker run --rm \
+            -e ROS_DISTRO=humble \
+            -e CI_TEST_SUITE=build-tools \
+            -v "${{ github.workspace }}/ci/validate.sh:/validate.sh:ro" \
+            ros2-kitchen-sink:ci \
+            bash /validate.sh
+
+  # ── Final gate — required for branch protection ──────────────
+  # This job always runs and checks which of the above actually
+  # ran. If something ran and failed, this fails. If a job was
+  # skipped (path filter didn't match), that's fine.
+  all-passed:
+    name: CI passed
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - changes
+      - base-humble
+      - base-jazzy
+      - build-tools
+      - user-setup
+      - gui
+      - nvidia
+      - kitchen-sink
+
+    steps:
+      - name: Check results
+        run: |
+          declare -A results
+          results[base-humble]="${{ needs.base-humble.result }}"
+          results[base-jazzy]="${{ needs.base-jazzy.result }}"
+          results[build-tools]="${{ needs.build-tools.result }}"
+          results[user-setup]="${{ needs.user-setup.result }}"
+          results[gui]="${{ needs.gui.result }}"
+          results[nvidia]="${{ needs.nvidia.result }}"
+          results[kitchen-sink]="${{ needs.kitchen-sink.result }}"
+
+          FAILED=0
+          for job in "${!results[@]}"; do
+            status="${results[$job]}"
+            if [ "$status" = "failure" ] || [ "$status" = "cancelled" ]; then
+              echo "✗ $job → $status"
+              FAILED=1
+            elif [ "$status" = "skipped" ]; then
+              echo "~ $job → skipped (path filter)"
+            else
+              echo "✓ $job → $status"
+            fi
+          done
+
+          if [ $FAILED -ne 0 ]; then
+            echo ""
+            echo "One or more required jobs failed."
+            exit 1
+          fi
+
+          echo ""
+          echo "All executed jobs passed."
