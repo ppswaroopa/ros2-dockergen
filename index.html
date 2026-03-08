@@ -1046,15 +1046,22 @@
             <div class="nav-inner">
                 <div class="logo"><a href="index.html"
                         style="text-decoration: none; color: inherit;">ros2<span>/</span>docker<span>-</span>gen</a>
-                    <span style="color:var(--green)">v1.0</span></div>
+                    <span style="color:var(--green)">v1.0</span>
+                </div>
                 <div style="display: flex; gap: 20px; align-items: center;">
                     <div class="nav-badge">v1.0 · Humble · Jazzy · Kilted</div>
-                    <a href="index.html"
-                        style="color: var(--text-dim); text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 11px; border: 1px solid var(--border-bright); padding: 4px 10px; border-radius: 2px; transition: all 0.2s;"
+                    <a href="https://ppswaroopa.github.io" target="_blank"
+                        style="color: var(--text-dim); text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 11px; border: 1px solid var(--border-bright); padding: 4px 10px; border-radius: 2px; transition: all 0.2s; display: flex; align-items: center; gap: 4px;"
                         onmouseover="this.style.color='var(--green)'; this.style.borderColor='var(--green)'"
-                        onmouseout="this.style.color='var(--text-dim)'; this.style.borderColor='var(--border-bright)'">←
-                        Back to
-                        Portfolio</a>
+                        onmouseout="this.style.color='var(--text-dim)'; this.style.borderColor='var(--border-bright)'">
+                        Developer Portfolio
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            style="margin-left: 2px; margin-bottom: 1px;">
+                            <line x1="7" y1="17" x2="17" y2="7"></line>
+                            <polyline points="7 7 17 7 17 17"></polyline>
+                        </svg>
+                    </a>
                 </div>
             </div>
         </div>
@@ -1072,14 +1079,14 @@
 
             <div
                 style="display: flex; justify-content: center; gap: 12px; margin-bottom: 48px; flex-wrap: wrap; opacity: 0; animation: fadeUp 0.6s ease 0.35s forwards;">
-                <a href="https://github.com/ppswaroopa/ppswaroopa.github.io/actions" target="_blank" class="pill green"
+                <a href="https://github.com/ppswaroopa/ros2-playground/actions" target="_blank" class="pill green"
                     style="text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s; padding: 6px 16px;"
                     onmouseover="this.style.background='rgba(0, 255, 136, 0.15)'"
                     onmouseout="this.style.background='rgba(0, 255, 136, 0.06)'" title="View GitHub Actions CI tests">
                     <span class="blink" style="font-size: 8px;">🟢</span>
                     <span><strong>CI Validated</strong> · Tested via GitHub Actions</span>
                 </a>
-                <a href="https://github.com/ppswaroopa/ppswaroopa.github.io/issues" target="_blank" class="pill"
+                <a href="https://github.com/ppswaroopa/ros2-playground/issues" target="_blank" class="pill"
                     style="text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s; padding: 6px 16px;"
                     onmouseover="this.style.color='#fff'; this.style.borderColor='#fff'"
                     onmouseout="this.style.color='var(--text-dim)'; this.style.borderColor='var(--border-bright)'"
@@ -1163,7 +1170,8 @@
                     headless/embedded systems with minimal overhead. Choose <strong>desktop</strong> if you plan to run
                     RViz or
                     Gazebo GUIs. Choose <strong>desktop-full</strong> for a complete ready-to-go experience (largest
-                    image).</div>
+                    image).
+                </div>
             </div>
             <div class="radio-grid" id="variant-grid">
                 <div class="radio-card selected" data-variant="ros-base" onclick="selectVariant(this)">
@@ -1624,7 +1632,8 @@
                 <div class="section-desc">Here are your generated files. Download them, drop them in a folder, and run
                     <code style="color:var(--green);font-family:JetBrains Mono;font-size:12px;">docker compose up</code>
                     to start your
-                    ROS2 environment.</div>
+                    ROS2 environment.
+                </div>
             </div>
 
             <!-- SUMMARY -->
