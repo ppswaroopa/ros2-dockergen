@@ -1,4 +1,4 @@
-# ROS 2 Playground
+# ROS 2 Docker Generator
 
 A collection of tools and environments for ROS 2 development.
 
