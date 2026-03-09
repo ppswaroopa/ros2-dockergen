@@ -396,8 +396,10 @@
             color: var(--orange);
             border: 1px solid rgba(255, 107, 53, 0.3);
             border-radius: 2px;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
             margin-top: 8px;
+            white-space: nowrap;
         }
 
         .option-badge.gpu {
@@ -410,6 +412,37 @@
             background: rgba(0, 255, 136, 0.08);
             color: var(--green);
             border-color: rgba(0, 255, 136, 0.3);
+        }
+
+        .select-tools-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .select-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border-bright);
+            color: var(--text-dim);
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 2px;
+        }
+
+        .select-btn:hover {
+            color: var(--text);
+            border-color: var(--text-dim);
+            background: var(--border);
+        }
+
+        .select-btn.active {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: var(--green);
+            color: var(--green);
         }
 
         /* RADIO SINGLE SELECT */
@@ -1036,6 +1069,18 @@
             color: var(--orange);
             background: rgba(255, 107, 53, 0.06);
         }
+
+        .summary-pills .pill {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .summary-pills .pill:hover {
+            border-color: var(--text-dim);
+            color: var(--text);
+            background: var(--surface2);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 
@@ -1152,13 +1197,12 @@
                 </div>
                 <div class="radio-card" data-distro="kilted" onclick="selectDistro(this)">
                     <div class="radio-dot"></div>
-                    <div class="option-icon">🪢</div>
+                    <div class="option-icon">🦖</div>
                     <div class="option-name">Kilted Kaiju</div>
-                    <div class="option-desc">Rolling Release<br>Focus on testing latest features</div>
+                    <div class="option-desc">Latest available version<br>Ubuntu 24.10</div>
                     <div class="option-badge"
-                        style="background:rgba(90,112,128,0.1);color:var(--text-dim);border-color:var(--border-bright);">
-                        Rolling
-                    </div>
+                        style="background:rgba(0, 212, 255, 0.1);color:var(--cyan);border-color:rgba(0, 212, 255, 0.3);">
+                        Latest</div>
                 </div>
             </div>
 
@@ -1212,11 +1256,17 @@
             <div class="options-grid">
                 <div class="option-card" data-pkg="nav2" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">🗺️</span>
+                    <span class="option-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a8 8 0 0 0-8 8c0 4.42 3.58 8 8 8s8-3.58 8-8a8 8 0 0 0-8-8z" />
+                            <path d="M12 18v4" />
+                            <path d="M8 22h8" />
+                        </svg>
+                    </span>
                     <div class="option-name">NAV2</div>
                     <div class="option-desc">Full navigation stack: SLAM, path planning, obstacle avoidance, recovery
-                        behaviors
-                    </div>
+                        behaviors</div>
                 </div>
                 <div class="option-card" data-pkg="slam_toolbox" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
@@ -1231,12 +1281,11 @@
                     <div class="option-desc">Google's real-time 2D/3D SLAM library with ROS2 integration</div>
                 </div>
             </div>
-
             <div class="divider-label">Simulation</div>
             <div class="options-grid">
                 <div class="option-card" data-pkg="gazebo" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">🌍</span>
+                    <span class="option-icon">📦</span>
                     <div class="option-name">Gazebo Classic</div>
                     <div class="option-desc">Full physics simulator for testing robots. Requires X11 or display
                         forwarding</div>
@@ -1244,14 +1293,14 @@
                 </div>
                 <div class="option-card" data-pkg="gz_sim" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">🌐</span>
+                    <span class="option-icon">💠</span>
                     <div class="option-name">Ignition / Gz Sim</div>
                     <div class="option-desc">Next-gen Gazebo (Ignition). Modern physics, better ROS2 bridging</div>
                     <div class="option-badge rec">New Gazebo</div>
                 </div>
                 <div class="option-card" data-pkg="rviz2" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">👁️</span>
+                    <span class="option-icon">👁️‍🗨️</span>
                     <div class="option-name">RViz2</div>
                     <div class="option-desc">3D visualization tool — view point clouds, transforms, robot models, sensor
                         data
@@ -1266,13 +1315,25 @@
                     <div class="option-check">✓</div>
                     <span class="option-icon">🤖</span>
                     <div class="option-name">TurtleBot3</div>
-                    <div class="option-desc">Full TurtleBot3 stack: bringup, simulation, navigation, teleop packages
+                    <div class="option-desc">Full TurtleBot3 stack: bringup, simulation, navigation, teleop
+                        packages
                     </div>
                     <div class="option-badge rec">Great for Learning</div>
                 </div>
                 <div class="option-card" data-pkg="moveit2" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">🦾</span>
+                    <span class="option-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
+                            <rect x="3" y="18" width="6" height="3" rx="1" fill="currentColor" />
+                            <path d="M6 18L8 10L16 7L20 11" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                            <circle cx="6" cy="18" r="1.5" fill="currentColor" />
+                            <circle cx="8" cy="10" r="1.5" fill="currentColor" />
+                            <circle cx="16" cy="7" r="1.5" fill="currentColor" />
+                            <circle cx="20" cy="11" r="2" stroke="currentColor" stroke-width="1.5" />
+                        </svg>
+
+                    </span>
                     <div class="option-name">MoveIt2</div>
                     <div class="option-desc">Motion planning framework for robotic arms and manipulation</div>
                 </div>
@@ -1280,7 +1341,8 @@
                     <div class="option-check">✓</div>
                     <span class="option-icon">⚙️</span>
                     <div class="option-name">ros2_control</div>
-                    <div class="option-desc">Hardware abstraction layer for actuators, sensors, and controllers</div>
+                    <div class="option-desc">Hardware abstraction layer for actuators, sensors, and controllers
+                    </div>
                 </div>
             </div>
 
@@ -1288,24 +1350,45 @@
             <div class="options-grid">
                 <div class="option-card" data-pkg="pcl" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">☁️</span>
+                    <span class="option-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="1" />
+                            <circle cx="15" cy="15" r="1" />
+                            <circle cx="9" cy="9" r="1" />
+                            <circle cx="12" cy="16" r="1" />
+                            <circle cx="16" cy="12" r="1" />
+                            <circle cx="8" cy="14" r="1" />
+                            <circle cx="14" cy="8" r="1" />
+                        </svg>
+                    </span>
                     <div class="option-name">PCL / Point Cloud</div>
-                    <div class="option-desc">Point Cloud Library + perception_pcl for 3D sensor processing (LiDAR, depth
-                        cameras)
-                    </div>
+                    <div class="option-desc">Point Cloud Library + perception_pcl for 3D sensor processing
+                        (LiDAR, depth
+                        cameras)</div>
                 </div>
                 <div class="option-card" data-pkg="cv_bridge" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
                     <span class="option-icon">📷</span>
                     <div class="option-name">CV Bridge + OpenCV</div>
-                    <div class="option-desc">Convert between ROS image messages and OpenCV for computer vision pipelines
+                    <div class="option-desc">Convert between ROS image messages and OpenCV for computer vision
+                        pipelines
                     </div>
                 </div>
                 <div class="option-card" data-pkg="tf2" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">📐</span>
+                    <span class="option-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 12h16" />
+                            <path d="M12 4v16" />
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19 5l-7 7-7-7" />
+                        </svg>
+                    </span>
                     <div class="option-name">TF2 Tools</div>
-                    <div class="option-desc">Transform library plus visualization and debugging tools for coordinate
+                    <div class="option-desc">Transform library plus visualization and debugging tools for
+                        coordinate
                         frames</div>
                 </div>
             </div>
@@ -1316,15 +1399,24 @@
                     <div class="option-check">✓</div>
                     <span class="option-icon">🌪️</span>
                     <div class="option-name">CycloneDDS</div>
-                    <div class="option-desc">Alternative DDS implementation — faster and more reliable for many use
+                    <div class="option-desc">Alternative DDS implementation — faster and more reliable for many
+                        use
                         cases</div>
                     <div class="option-badge rec">Recommended DDS</div>
                 </div>
                 <div class="option-card" data-pkg="rosbridge" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">🌉</span>
+                    <span class="option-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
+                            <circle cx="5" cy="12" r="3" stroke="currentColor" stroke-width="2.5" />
+                            <path d="M8 12C10 8 14 8 16 12" stroke="currentColor" stroke-width="2.5"
+                                stroke-linecap="round" />
+                            <rect x="16" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="2.5" />
+                        </svg>
+                    </span>
                     <div class="option-name">ROSBridge Suite</div>
-                    <div class="option-desc">WebSocket bridge to connect web apps, mobile apps, and non-ROS systems
+                    <div class="option-desc">WebSocket bridge to connect web apps, mobile apps, and non-ROS
+                        systems
                     </div>
                 </div>
             </div>
@@ -1332,24 +1424,34 @@
             <div class="divider-label">GPU & Accelerated Computing</div>
             <div class="warn-box">
                 <div class="info-box-icon">⚠️</div>
-                <div class="warn-box-text"><strong>GPU packages require NVIDIA drivers on your host</strong> + the
+                <div class="warn-box-text"><strong>GPU packages require NVIDIA drivers on your host</strong> +
+                    the
                     NVIDIA
-                    Container Toolkit. Without these, the container won't start. Only select if you have an NVIDIA GPU.
+                    Container Toolkit. Without these, the container won't start. Only select if you have an
+                    NVIDIA GPU.
                 </div>
             </div>
             <div class="options-grid">
                 <div class="option-card" data-pkg="cuda" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">⚡</span>
+                    <span class="option-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#76b900" stroke-width="2">
+                            <path d="M12 1L2 7v10l10 6 10-6V7L12 1z" />
+                            <path d="M12 22V12M22 7l-10 5L2 7" />
+                            <path d="M12 1L2 7M12 1l10 6" />
+                        </svg>
+                    </span>
                     <div class="option-name">CUDA Support</div>
-                    <div class="option-desc">NVIDIA CUDA base image + toolkit for GPU-accelerated computing</div>
+                    <div class="option-desc">NVIDIA CUDA base image + toolkit for GPU-accelerated computing
+                    </div>
                     <div class="option-badge gpu">NVIDIA GPU</div>
                 </div>
                 <div class="option-card" data-pkg="tensorrt" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
                     <span class="option-icon">🧠</span>
                     <div class="option-name">TensorRT</div>
-                    <div class="option-desc">NVIDIA's deep learning inference optimizer — run neural networks fast</div>
+                    <div class="option-desc">NVIDIA's deep learning inference optimizer — run neural networks
+                        fast</div>
                     <div class="option-badge gpu">NVIDIA GPU</div>
                 </div>
             </div>
@@ -1365,18 +1467,25 @@
             <div class="section-header">
                 <div class="section-tag">Step 03 — Development Environment</div>
                 <div class="section-title">Configure Dev Tools</div>
-                <div class="section-desc">Select the development utilities you want pre-installed. These make day-to-day
+                <div class="section-desc">Select the development utilities you want pre-installed. These make
+                    day-to-day
                     work
                     inside the container comfortable.</div>
             </div>
 
             <div class="divider-label">Build & Package Tools</div>
+            <div class="select-tools-group">
+                <button class="select-btn active" onclick="selectPopularTools()">Most Popular</button>
+                <button class="select-btn" onclick="selectAllTools()">Select All</button>
+                <button class="select-btn" onclick="unselectAllTools()">Unselect All</button>
+            </div>
             <div class="toggle-row on" data-tool="colcon" onclick="toggleTool(this)">
                 <div class="toggle-info">
                     <span class="toggle-icon">🔨</span>
                     <div>
                         <div class="toggle-label">colcon</div>
-                        <div class="toggle-sub">ROS2's build tool — required for building workspace packages</div>
+                        <div class="toggle-sub">ROS2's build tool — required for building workspace packages
+                        </div>
                     </div>
                 </div>
                 <div class="toggle-switch"></div>
@@ -1386,7 +1495,8 @@
                     <span class="toggle-icon">📦</span>
                     <div>
                         <div class="toggle-label">rosdep</div>
-                        <div class="toggle-sub">Dependency manager — install ROS package dependencies with one command
+                        <div class="toggle-sub">Dependency manager — install ROS package dependencies with one
+                            command
                         </div>
                     </div>
                 </div>
@@ -1394,17 +1504,54 @@
             </div>
             <div class="toggle-row on" data-tool="python3" onclick="toggleTool(this)">
                 <div class="toggle-info">
-                    <span class="toggle-icon">🐍</span>
+                    <span class="toggle-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
+                            <!-- Top Snake (Blue) -->
+                            <path
+                                d="M11.88 2C8.38 2 8.64 3.51 8.64 3.51V5.74H12.02V6.22H7.28C4.51 6.22 4 8.6 4 8.6V12.78C4 12.78 4.39 14.37 7.02 14.37H8.5V12.28C8.5 12.28 8.43 9.8 10.9 9.8H14.16V6.15C14.16 6.15 14.29 2 11.88 2Z"
+                                fill="#3776AB" />
+
+                            <!-- Bottom Snake (Yellow) -->
+                            <path
+                                d="M12.12 22C15.62 22 15.36 20.49 15.36 20.49V18.26H11.98V17.78H16.72C19.49 17.78 20 15.4 20 15.4V11.22C20 11.22 19.61 9.63 16.98 9.63H15.5V11.72C15.5 11.72 15.57 14.2 13.1 14.2H9.84V17.85C9.84 17.85 9.71 22 12.12 22Z"
+                                fill="#FFD43B" />
+
+                            <!-- Eyes -->
+                            <circle cx="9.8" cy="4" r="0.6" fill="white" />
+                            <circle cx="14.2" cy="20" r="0.6" fill="white" />
+                        </svg>
+
+
+
+                    </span>
                     <div>
                         <div class="toggle-label">Python3 + pip</div>
-                        <div class="toggle-sub">Python development with pip, venv support, and common packages</div>
+                        <div class="toggle-sub">Python development with pip, venv support, and common packages
+                        </div>
                     </div>
                 </div>
                 <div class="toggle-switch"></div>
             </div>
             <div class="toggle-row" data-tool="cmake" onclick="toggleTool(this)">
                 <div class="toggle-info">
-                    <span class="toggle-icon">🔧</span>
+                    <span class="toggle-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- The C - Balanced and Open -->
+                            <path
+                                d="M12 7C11.2 6.4 10.2 6 9 6C6.2 6 4 8.2 4 11C4 13.8 6.2 16 9 16C10.2 16 11.2 15.6 12 15"
+                                stroke="#659AD2" stroke-width="3.5" stroke-linecap="round" />
+
+                            <!-- First Plus (+) -->
+                            <path d="M14 11H18M16 9V13" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" />
+
+                            <!-- Second Plus (+) - Separated by a clear 2px gap -->
+                            <path d="M20 11H24M22 9V13" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" />
+                        </svg>
+
+
+
+
+                    </span>
                     <div>
                         <div class="toggle-label">CMake + build-essential</div>
                         <div class="toggle-sub">C++ build toolchain — needed for compiling native packages</div>
@@ -1416,7 +1563,15 @@
             <div class="divider-label">Version Control & Workspace</div>
             <div class="toggle-row on" data-tool="git" onclick="toggleTool(this)">
                 <div class="toggle-info">
-                    <span class="toggle-icon">🌿</span>
+                    <span class="toggle-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f05032" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="18" cy="18" r="3" />
+                            <circle cx="6" cy="6" r="3" />
+                            <path d="M6 9v12" />
+                            <path d="M18 15l-6-6" />
+                        </svg>
+                    </span>
                     <div>
                         <div class="toggle-label">Git</div>
                         <div class="toggle-sub">Version control — clone repos, manage code, pull packages</div>
@@ -1426,10 +1581,17 @@
             </div>
             <div class="toggle-row" data-tool="vcstool" onclick="toggleTool(this)">
                 <div class="toggle-info">
-                    <span class="toggle-icon">🗂️</span>
+                    <span class="toggle-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff4444" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="4" y="8" width="16" height="12" rx="1" />
+                            <circle cx="8" cy="6" r="2" />
+                            <circle cx="16" cy="6" r="2" />
+                        </svg>
+                    </span>
                     <div>
                         <div class="toggle-label">vcstool</div>
-                        <div class="toggle-sub">Manage multiple repos with a .repos file — great for large workspaces
+                        <div class="toggle-sub">Manage multiple repos with a .repos file — lego-like modularity
                         </div>
                     </div>
                 </div>
@@ -1442,7 +1604,8 @@
                     <span class="toggle-icon">🖥️</span>
                     <div>
                         <div class="toggle-label">X11 Display Forwarding</div>
-                        <div class="toggle-sub">Run GUI apps (RViz, Gazebo) from inside the container on your Windows
+                        <div class="toggle-sub">Run GUI apps (RViz, Gazebo) from inside the container on your
+                            Windows
                             desktop</div>
                     </div>
                 </div>
@@ -1465,7 +1628,8 @@
                     <span class="toggle-icon">📟</span>
                     <div>
                         <div class="toggle-label">tmux</div>
-                        <div class="toggle-sub">Terminal multiplexer — run multiple sessions, split panes, detach and
+                        <div class="toggle-sub">Terminal multiplexer — run multiple sessions, split panes,
+                            detach and
                             reattach</div>
                     </div>
                 </div>
@@ -1488,7 +1652,8 @@
                     <span class="toggle-icon">🐛</span>
                     <div>
                         <div class="toggle-label">GDB Debugger</div>
-                        <div class="toggle-sub">GNU debugger for C++ ROS2 nodes — add breakpoints, inspect crashes</div>
+                        <div class="toggle-sub">GNU debugger for C++ ROS2 nodes — add breakpoints, inspect
+                            crashes</div>
                     </div>
                 </div>
                 <div class="toggle-switch"></div>
@@ -1498,7 +1663,8 @@
                     <span class="toggle-icon">🔌</span>
                     <div>
                         <div class="toggle-label">Network Tools</div>
-                        <div class="toggle-sub">net-tools, iproute2, curl, wget, ping — diagnose ROS2 DDS network issues
+                        <div class="toggle-sub">net-tools, iproute2, curl, wget, ping — diagnose ROS2 DDS
+                            network issues
                         </div>
                     </div>
                 </div>
@@ -1509,7 +1675,8 @@
                     <span class="toggle-icon">🐚</span>
                     <div>
                         <div class="toggle-label">Zsh + Oh-My-Zsh</div>
-                        <div class="toggle-sub">Enhanced shell with autocomplete, themes, and ROS2 plugin support</div>
+                        <div class="toggle-sub">Enhanced shell with autocomplete, themes, and ROS2 plugin
+                            support</div>
                     </div>
                 </div>
                 <div class="toggle-switch"></div>
@@ -1526,7 +1693,8 @@
             <div class="section-header">
                 <div class="section-tag">Step 04 — User Configuration</div>
                 <div class="section-title">Set Up Your User</div>
-                <div class="section-desc">Running as root works but isn't recommended. A named user avoids permission
+                <div class="section-desc">Running as root works but isn't recommended. A named user avoids
+                    permission
                     headaches
                     when mounting volumes from your host system.</div>
             </div>
@@ -1537,7 +1705,8 @@
                     <div class="radio-dot"></div>
                     <div class="option-icon">👤</div>
                     <div class="option-name">Custom User</div>
-                    <div class="option-desc">Named non-root user. Matches your host UID for clean volume permissions
+                    <div class="option-desc">Named non-root user. Matches your host UID for clean volume
+                        permissions
                     </div>
                     <div class="option-badge rec">Recommended</div>
                 </div>
@@ -1545,7 +1714,8 @@
                     <div class="radio-dot"></div>
                     <div class="option-icon">👑</div>
                     <div class="option-name">Root Only</div>
-                    <div class="option-desc">Run as root. Simpler setup but not recommended for development</div>
+                    <div class="option-desc">Run as root. Simpler setup but not recommended for development
+                    </div>
                 </div>
             </div>
 
@@ -1571,7 +1741,8 @@
                         <span class="toggle-icon">🛡️</span>
                         <div>
                             <div class="toggle-label">sudo (no password)</div>
-                            <div class="toggle-sub">Allow installing packages and admin commands inside the container
+                            <div class="toggle-sub">Allow installing packages and admin commands inside the
+                                container
                             </div>
                         </div>
                     </div>
@@ -1584,7 +1755,8 @@
                         <label class="form-label">Workspace Directory</label>
                         <input class="form-input" type="text" id="workspace" placeholder="/home/ros-dev/ros2_ws"
                             value="/home/ros-dev/ros2_ws" oninput="generateFiles()">
-                        <span class="form-hint">Where your ROS2 workspace will be created inside the container</span>
+                        <span class="form-hint">Where your ROS2 workspace will be created inside the
+                            container</span>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Container Name (Compose)</label>
@@ -1601,7 +1773,8 @@
                     <span class="toggle-icon">📜</span>
                     <div>
                         <div class="toggle-label">Auto-source ROS2 setup.bash</div>
-                        <div class="toggle-sub">Automatically source /opt/ros/$ROS_DISTRO/setup.bash in .bashrc on
+                        <div class="toggle-sub">Automatically source /opt/ros/$ROS_DISTRO/setup.bash in .bashrc
+                            on
                             startup</div>
                     </div>
                 </div>
@@ -1612,7 +1785,8 @@
                     <span class="toggle-icon">🔤</span>
                     <div>
                         <div class="toggle-label">Set locale to UTF-8</div>
-                        <div class="toggle-sub">Prevents ROS2 locale warnings and encoding issues at startup</div>
+                        <div class="toggle-sub">Prevents ROS2 locale warnings and encoding issues at startup
+                        </div>
                     </div>
                 </div>
                 <div class="toggle-switch"></div>
@@ -1629,7 +1803,8 @@
             <div class="section-header">
                 <div class="section-tag">Step 05 — Your Files</div>
                 <div class="section-title">Your Environment is Ready <span class="blink">█</span></div>
-                <div class="section-desc">Here are your generated files. Download them, drop them in a folder, and run
+                <div class="section-desc">Here are your generated files. Download them, drop them in a folder,
+                    and run
                     <code style="color:var(--green);font-family:JetBrains Mono;font-size:12px;">docker compose up</code>
                     to start your
                     ROS2 environment.
@@ -1680,13 +1855,15 @@
             <div class="quickstart">
                 <div class="section-tag">What's Next</div>
                 <div class="section-title" style="font-size:24px;">Getting Started</div>
-                <div class="section-desc" style="margin-bottom:24px;">If you are on Linux, you can skip steps 1 and 2.
+                <div class="section-desc" style="margin-bottom:24px;">If you are on Linux, you can skip steps 1
+                    and 2.
                 </div>
                 <div class="qs-steps">
                     <div class="qs-step">
                         <div class="qs-num">01</div>
                         <div class="qs-title">Install Docker</div>
-                        <div class="qs-text">Windows: Download Docker Desktop and enable WSL2. Linux: Install Docker
+                        <div class="qs-text">Windows: Download Docker Desktop and enable WSL2. Linux: Install
+                            Docker
                             Engine
                             natively.</div>
                         <a class="qs-cmd" style="text-decoration:none;" href="https://docs.docker.com/get-docker/"
@@ -1695,7 +1872,8 @@
                     <div class="qs-step">
                         <div class="qs-num">02</div>
                         <div class="qs-title">Display Server (GUI)</div>
-                        <div class="qs-text">Windows 11 uses WSLg automatically. Older Windows need VcXsrv. Linux runs
+                        <div class="qs-text">Windows 11 uses WSLg automatically. Older Windows need VcXsrv.
+                            Linux runs
                             X11 natively.
                         </div>
                         <span class="qs-cmd">Linux / Win 11: Built-in</span>
@@ -1710,7 +1888,8 @@
                     <div class="qs-step">
                         <div class="qs-num">04</div>
                         <div class="qs-title">Start &amp; Explore</div>
-                        <div class="qs-text">Launch your environment. Attach a shell and start building your robotics
+                        <div class="qs-text">Launch your environment. Attach a shell and start building your
+                            robotics
                             application.
                         </div>
                         <span class="qs-cmd">docker compose up -d</span>
@@ -1718,7 +1897,8 @@
                     <div class="qs-step">
                         <div class="qs-num">05</div>
                         <div class="qs-title">Connect a Shell</div>
-                        <div class="qs-text">Open a terminal inside your running container. Your workspace is at the
+                        <div class="qs-text">Open a terminal inside your running container. Your workspace is at
+                            the
                             path you
                             configured.</div>
                         <span id="qs-exec" class="qs-cmd">docker exec -it ros2_dev bash</span>
@@ -1726,7 +1906,8 @@
                     <div class="qs-step">
                         <div class="qs-num">06</div>
                         <div class="qs-title">Stop When Done</div>
-                        <div class="qs-text">Shut down the container cleanly. Your workspace volume persists between
+                        <div class="qs-text">Shut down the container cleanly. Your workspace volume persists
+                            between
                             restarts.</div>
                         <span class="qs-cmd">docker compose down</span>
                     </div>
@@ -1745,7 +1926,8 @@
     <footer>
         <div class="container">
             <div class="footer-text">
-                ROS2 Docker Generator v1.0 · Built for the ROS2 community · Files generated entirely in your browser —
+                ROS2 Docker Generator v1.0 · Built for the ROS2 community · Files generated entirely in your
+                browser —
                 nothing
                 sent to any server<br>
                 <a href="https://docs.ros.org/en/humble/" target="_blank">ROS2 Docs</a> ·
@@ -1783,11 +1965,17 @@
 
             document.querySelectorAll('.step-dot').forEach((d, i) => {
                 d.classList.remove('active', 'done');
-                if (i + 1 < n) d.classList.add('done');
-                else if (i + 1 === n) d.classList.add('active');
+                const numEl = d.querySelector('.num');
+                const stepNum = i + 1;
+
+                if (stepNum < n) {
+                    d.classList.add('done');
+                    numEl.textContent = ''; // CSS ::after provides checkmark
+                } else {
+                    if (stepNum === n) d.classList.add('active');
+                    numEl.textContent = stepNum;
+                }
             });
-            // Replace num text in done steps with checkmark via CSS
-            document.querySelectorAll('.step-dot.done .num').forEach(el => el.textContent = '');
 
             state.currentStep = n;
 
@@ -1834,7 +2022,51 @@
             const tool = el.dataset.tool;
             if (state.tools.has(tool)) state.tools.delete(tool);
             else state.tools.add(tool);
+
+            // De-activate "Most Popular" if custom selection made
+            document.querySelectorAll('.select-btn').forEach(b => b.classList.remove('active'));
+
             generateFiles();
+        }
+
+        function selectAllTools() {
+            document.querySelectorAll('.toggle-row[data-tool]').forEach(el => {
+                if (!el.classList.contains('on')) el.classList.add('on');
+                state.tools.add(el.dataset.tool);
+            });
+            updateSelectUI('Select All');
+            generateFiles();
+        }
+
+        function unselectAllTools() {
+            document.querySelectorAll('.toggle-row[data-tool]').forEach(el => {
+                el.classList.remove('on');
+                state.tools.delete(el.dataset.tool);
+            });
+            updateSelectUI('Unselect All');
+            generateFiles();
+        }
+
+        function selectPopularTools() {
+            const popular = ['colcon', 'rosdep', 'python3', 'git', 'x11', 'bashrc', 'locale', 'sudo'];
+            document.querySelectorAll('.toggle-row[data-tool]').forEach(el => {
+                const tool = el.dataset.tool;
+                if (popular.includes(tool)) {
+                    el.classList.add('on');
+                    state.tools.add(tool);
+                } else {
+                    el.classList.remove('on');
+                    state.tools.delete(tool);
+                }
+            });
+            updateSelectUI('Most Popular');
+            generateFiles();
+        }
+
+        function updateSelectUI(btnText) {
+            document.querySelectorAll('.select-btn').forEach(b => {
+                b.classList.toggle('active', b.textContent === btnText);
+            });
         }
 
         function selectUserType(el) {
@@ -1887,6 +2119,13 @@
             if (dfEl) dfEl.innerHTML = syntaxHL(df);
             if (cpEl) cpEl.innerHTML = syntaxHL(cp);
             if (rmEl) rmEl.textContent = rm;
+
+            // Update button counts
+            document.querySelectorAll('.btn-primary, .btn-secondary').forEach(btn => {
+                if (btn.textContent.includes('Download All')) btn.textContent = '⬇ Download All (3 files)';
+                if (btn.textContent.includes('Dockerfile')) btn.textContent = '⬇ Dockerfile (1)';
+                if (btn.textContent.includes('Download Everything')) btn.textContent = '⬇ Download Everything (3 files)';
+            });
         }
 
         function buildDockerfile() { return ROS2_GENERATOR_CORE.buildDockerfile(state); }
@@ -1900,17 +2139,16 @@
             const el = document.getElementById('summary-pills');
             if (!el) return;
             const pills = [];
-            pills.push({ label: `ROS2 ${state.distro}`, cls: 'cyan' });
-            pills.push({ label: state.variant, cls: '' });
-            if (state.packages.size) pills.push({ label: `${state.packages.size} packages`, cls: 'green' });
-            if (state.tools.size) pills.push({ label: `${state.tools.size} dev tools`, cls: '' });
-            if (state.userType !== 'root') pills.push({ label: `user: ${state.username}`, cls: 'green' });
-            else pills.push({ label: 'root user', cls: 'orange' });
-            if (state.packages.has('cuda')) pills.push({ label: 'NVIDIA GPU', cls: 'orange' });
-            if (state.tools.has('x11')) pills.push({ label: 'X11 GUI', cls: '' });
+            pills.push({ label: `ROS2 ${state.distro}`, cls: 'cyan', step: 1 });
+            pills.push({ label: state.variant, cls: '', step: 1 });
+            if (state.packages.size) pills.push({ label: `${state.packages.size} packages`, cls: 'green', step: 2 });
+            if (state.tools.size) pills.push({ label: `${state.tools.size} dev tools`, cls: '', step: 3 });
+            if (state.userType !== 'root') pills.push({ label: `user: ${state.username}`, cls: 'green', step: 4 });
+            else pills.push({ label: 'root user', cls: 'orange', step: 4 });
+            if (state.packages.has('cuda')) pills.push({ label: 'NVIDIA GPU', cls: 'orange', step: 2 });
+            if (state.tools.has('x11')) pills.push({ label: 'X11 GUI', cls: '', step: 3 });
 
-            el.innerHTML = pills.map(p => `<span class="pill ${p.cls}">${p.label}</span>`).join('') +
-                `<span class="pill green" style="margin-left:auto; border-style:dashed;" title="This combination of tools and packages has been validated by our CI suite.">✓ CI Verified Pattern</span>`;
+            el.innerHTML = pills.map(p => `<span class="pill ${p.cls}" onclick="showStep(${p.step}, true)">${p.label}</span>`).join('');
         }
 
         // ============================================================
