@@ -117,6 +117,40 @@ jobs:
       distro: jazzy
       variant: ros-base
 
+  base-jazzy-desktop:
+    name: "Base · Jazzy / desktop"
+    needs: changes
+    if: |
+      needs.changes.outputs.generator == 'true' ||
+      github.event.inputs.run_all == 'true'
+    uses: ./.github/workflows/_test-base.yml
+    with:
+      distro: jazzy
+      variant: desktop
+
+  base-kilted:
+    name: "Base · Kilted"
+    needs: changes
+    if: |
+      needs.changes.outputs.generator == 'true' ||
+      github.event.inputs.run_all == 'true' ||
+      github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/_test-base.yml
+    with:
+      distro: kilted
+      variant: ros-base
+
+  base-kilted-desktop:
+    name: "Base · Kilted / desktop"
+    needs: changes
+    if: |
+      needs.changes.outputs.generator == 'true' ||
+      github.event.inputs.run_all == 'true'
+    uses: ./.github/workflows/_test-base.yml
+    with:
+      distro: kilted
+      variant: desktop
+
   # ── Build tools — runs once, not per distro ─────────────────
   # apt install lines are structurally identical across distros.
   # Verify on humble; if the package names were wrong for jazzy,
@@ -172,12 +206,16 @@ jobs:
   # Ensures there are no apt-get conflicts between various tools
   # or ROS2 packages (e.g. RMW conflicts or GUI lib overlaps).
   kitchen-sink:
-    name: "Kitchen Sink (All tools/pkgs)"
+    name: "Kitchen Sink (${{ matrix.distro }})"
     needs: changes
     if: |
       needs.changes.outputs.generator == 'true' ||
       github.event.inputs.run_all == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [humble, jazzy, kilted]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -186,7 +224,7 @@ jobs:
       - name: Generate Dockerfile (The Everything Config)
         run: |
           node ros2-docker-generator/generate.js \
-            --distro   humble \
+            --distro   ${{ matrix.distro }} \
             --variant  desktop-full \
             --packages "nav2,slam_toolbox,cartographer,gazebo,rviz2,turtlebot3,moveit2,ros2_control,pcl,cv_bridge,tf2,cyclone_dds" \
             --tools    "colcon,rosdep,python3,git,cmake,nano,tmux,gdb,net_tools,vcstool,ssh,x11,zsh,bashrc,locale,sudo" \
@@ -206,7 +244,7 @@ jobs:
       - name: Validate
         run: |
           docker run --rm \
-            -e ROS_DISTRO=humble \
+            -e ROS_DISTRO=${{ matrix.distro }} \
             -e CI_TEST_SUITE=build-tools \
             -v "${{ github.workspace }}/ros2-docker-generator/validate.sh:/validate.sh:ro" \
             ros2-kitchen-sink:ci \
@@ -223,7 +261,11 @@ jobs:
     needs:
       - changes
       - base-humble
+      - base-humble-desktop
       - base-jazzy
+      - base-jazzy-desktop
+      - base-kilted
+      - base-kilted-desktop
       - build-tools
       - user-setup
       - gui
@@ -235,7 +277,11 @@ jobs:
         run: |
           declare -A results
           results[base-humble]="${{ needs.base-humble.result }}"
+          results[base-humble-desktop]="${{ needs.base-humble-desktop.result }}"
           results[base-jazzy]="${{ needs.base-jazzy.result }}"
+          results[base-jazzy-desktop]="${{ needs.base-jazzy-desktop.result }}"
+          results[base-kilted]="${{ needs.base-kilted.result }}"
+          results[base-kilted-desktop]="${{ needs.base-kilted-desktop.result }}"
           results[build-tools]="${{ needs.build-tools.result }}"
           results[user-setup]="${{ needs.user-setup.result }}"
           results[gui]="${{ needs.gui.result }}"

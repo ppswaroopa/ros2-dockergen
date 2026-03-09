@@ -21,7 +21,7 @@ on:
     inputs:
       distro:
         required: true
-        type: string   # humble | jazzy | iron
+        type: string   # humble | jazzy | kilted
       variant:
         required: true
         type: string   # ros-base | desktop | desktop-full

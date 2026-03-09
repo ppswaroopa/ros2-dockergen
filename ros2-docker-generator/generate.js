@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // =============================================================
-// ci/generate.js
+// ros2-docker-generator/generate.js
 // Generates Dockerfile + docker-compose.yml for a given config.
 // Used by CI to produce files that are then built + tested.
 //
 // Usage:
-//   node ci/generate.js --distro humble --variant ros-base --out /tmp/test-humble-base
-//   node ci/generate.js --distro jazzy  --variant desktop  --out /tmp/test-jazzy-desktop
+//   node ros2-docker-generator/generate.js --distro humble --variant ros-base --out /tmp/test-humble-base
+//   node ros2-docker-generator/generate.js --distro jazzy  --variant desktop  --out /tmp/test-jazzy-desktop
 //
 // All flags:
-//   --distro    humble | jazzy | iron
+//   --distro    humble | jazzy | kilted
 //   --variant   ros-base | desktop | desktop-full
 //   --packages  comma-separated: nav2,slam_toolbox,turtlebot3,...
 //   --tools     comma-separated: colcon,rosdep,python3,git,x11,...
@@ -53,7 +53,7 @@ const config = {
 };
 
 // ── Validate inputs ───────────────────────────────────────────
-const validDistros = ['humble', 'jazzy', 'iron'];
+const validDistros = ['humble', 'jazzy', 'kilted'];
 const validVariants = ['ros-base', 'desktop', 'desktop-full'];
 
 if (!validDistros.includes(distro)) {
