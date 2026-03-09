@@ -156,14 +156,18 @@ jobs:
   # Verify on humble; if the package names were wrong for jazzy,
   # the base-jazzy job above would catch it.
   build-tools:
-    name: "Build Tools"
+    name: "Build Tools (${{ matrix.distro }})"
     needs: changes
     if: |
       needs.changes.outputs.generator == 'true' ||
       github.event.inputs.run_all == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [humble, jazzy]
     uses: ./.github/workflows/_test-build-tools.yml
     with:
-      distro: humble
+      distro: ${{ matrix.distro }}
 
   # ── User setup — runs once, 2 cases internally ──────────────
   # root vs custom user. Distro-independent — same RUN commands.
@@ -179,28 +183,36 @@ jobs:
   # Xvfb provides a virtual display. Tests binary presence and
   # that packages install without apt conflicts.
   gui:
-    name: "GUI Packages"
+    name: "GUI Packages (${{ matrix.distro }})"
     needs: changes
     if: |
       needs.changes.outputs.gui == 'true' ||
       github.event.inputs.run_all == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [humble, jazzy]
     uses: ./.github/workflows/_test-gui.yml
     with:
-      distro: humble
+      distro: ${{ matrix.distro }}
 
   # ── NVIDIA — only when NVIDIA-related files change ───────────
   # Skipped on normal pushes unless generate.js or the nvidia
   # workflow itself was modified. This keeps CI fast day-to-day
   # since the CUDA base image is ~6GB.
   nvidia:
-    name: "NVIDIA / CUDA"
+    name: "NVIDIA / CUDA (${{ matrix.distro }})"
     needs: changes
     if: |
       needs.changes.outputs.nvidia == 'true' ||
       github.event.inputs.run_all == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [humble, jazzy]
     uses: ./.github/workflows/_test-nvidia.yml
     with:
-      distro: humble
+      distro: ${{ matrix.distro }}
 
   # ── Kitchen Sink — Tests ALL packages and tools at once ──────
   # Ensures there are no apt-get conflicts between various tools

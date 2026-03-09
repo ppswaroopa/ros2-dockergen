@@ -69,9 +69,11 @@ const ROS2_GENERATOR_CORE = {
         } = config;
 
         const isRoot = userType === 'root';
+        const ubuntuVersion = distro === 'humble' ? 'ubuntu22.04' : 'ubuntu24.04';
+        const cudaVersion = distro === 'humble' ? '12.3.1' : '12.4.1';
         const hasCuda = packages.has('cuda') || packages.has('tensorrt');
         const baseImage = hasCuda
-            ? `nvidia/cuda:12.3.1-devel-ubuntu22.04`
+            ? `nvidia/cuda:${cudaVersion}-devel-${ubuntuVersion}`
             : this.getBaseImage(distro, variant);
 
         const lines = [];
