@@ -12,7 +12,7 @@
 #   _test-nvidia      → CUDA base image (only on relevant changes)
 #
 # Path filters decide which jobs run:
-#   Any change to ros2-docker-generator/generate.js → everything runs
+#   Any change to ros2-docker-generator/CI/generate.js → everything runs
 #   Change to only index.html    → only base runs (smoke check)
 #   Change to _test-nvidia.yml   → only nvidia runs
 #
@@ -56,24 +56,24 @@ jobs:
         with:
           filters: |
             generator:
-              - 'ros2-docker-generator/generate.js'
-              - 'ros2-docker-generator/validate.sh'
+              - 'ros2-docker-gen/CI/generate.js'
+              - 'ros2-docker-gen/CI/validate.sh'
               - '.github/workflows/ci.yml'
               - '.github/workflows/_test-base.yml'
             user_setup:
-              - 'ros2-docker-generator/generate.js'
-              - 'ros2-docker-generator/validate.sh'
+              - 'ros2-docker-gen/CI/generate.js'
+              - 'ros2-docker-gen/CI/validate.sh'
               - '.github/workflows/_test-user-setup.yml'
             gui:
-              - 'ros2-docker-generator/generate.js'
-              - 'ros2-docker-generator/validate.sh'
+              - 'ros2-docker-gen/CI/generate.js'
+              - 'ros2-docker-gen/CI/validate.sh'
               - '.github/workflows/_test-gui.yml'
             nvidia:
-              - 'ros2-docker-generator/generate.js'
-              - 'ros2-docker-generator/validate.sh'
+              - 'ros2-docker-gen/CI/generate.js'
+              - 'ros2-docker-gen/CI/validate.sh'
               - '.github/workflows/_test-nvidia.yml'
             any:
-              - 'ros2-docker-generator/**'
+              - 'ros2-docker-gen/**'
               - '.github/workflows/**'
               - 'index.html'
               - 'README.md'
@@ -235,7 +235,7 @@ jobs:
           node-version: '20'
       - name: Generate Dockerfile (The Everything Config)
         run: |
-          node ros2-docker-generator/generate.js \
+          node ros2-docker-gen/CI/generate.js \
             --distro   ${{ matrix.distro }} \
             --variant  desktop-full \
             --packages "nav2,slam_toolbox,cartographer,gazebo,rviz2,turtlebot3,moveit2,ros2_control,pcl,cv_bridge,tf2,cyclone_dds" \
@@ -258,7 +258,7 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO=${{ matrix.distro }} \
             -e CI_TEST_SUITE=build-tools \
-            -v "${{ github.workspace }}/ros2-docker-generator/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/ros2-docker-gen/CI/validate.sh:/validate.sh:ro" \
             ros2-kitchen-sink:ci \
             bash /validate.sh
 

@@ -44,7 +44,7 @@ jobs:
 
       - name: Generate Dockerfile (CUDA enabled)
         run: |
-          node ros2-docker-generator/generate.js \
+          node ros2-docker-gen/CI/generate.js \
             --distro   "${{ inputs.distro }}" \
             --variant  "ros-base" \
             --packages "cuda" \
@@ -89,6 +89,6 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO="${{ inputs.distro }}" \
             -e CI_TEST_SUITE=nvidia \
-            -v "${{ github.workspace }}/ros2-docker-generator/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/ros2-docker-gen/CI/validate.sh:/validate.sh:ro" \
             ros2-test-nvidia-${{ inputs.distro }}:ci \
             bash /validate.sh

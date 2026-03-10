@@ -8,7 +8,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap"
         rel="stylesheet">
-    <script src="ros2-docker-generator/core.js"></script>
+    <script src="ros2-docker-gen/src/core.js"></script>
     <style>
         :root {
             --bg: #0a0d0f;
@@ -2109,9 +2109,9 @@
             state.containerName = document.getElementById('container-name')?.value || 'ros2_dev';
 
             // Use the UNIFIED core generator
-            const df = ROS2_GENERATOR_CORE.buildDockerfile(state);
-            const cp = ROS2_GENERATOR_CORE.buildCompose(state);
-            const rm = ROS2_GENERATOR_CORE.buildReadme(state);
+            const df = ROS2_DOCKER_GEN_CORE.buildDockerfile(state);
+            const cp = ROS2_DOCKER_GEN_CORE.buildCompose(state);
+            const rm = ROS2_DOCKER_GEN_CORE.buildReadme(state);
 
             const dfEl = document.getElementById('dockerfile-out');
             const cpEl = document.getElementById('compose-out');
@@ -2128,9 +2128,9 @@
             });
         }
 
-        function buildDockerfile() { return ROS2_GENERATOR_CORE.buildDockerfile(state); }
-        function buildCompose() { return ROS2_GENERATOR_CORE.buildCompose(state); }
-        function buildReadme() { return ROS2_GENERATOR_CORE.buildReadme(state); }
+        function buildDockerfile() { return ROS2_DOCKER_GEN_CORE.buildDockerfile(state); }
+        function buildCompose() { return ROS2_DOCKER_GEN_CORE.buildCompose(state); }
+        function buildReadme() { return ROS2_DOCKER_GEN_CORE.buildReadme(state); }
 
         // ============================================================
         // SUMMARY

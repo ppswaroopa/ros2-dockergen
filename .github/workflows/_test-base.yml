@@ -39,7 +39,7 @@ jobs:
 
       - name: Generate Dockerfile
         run: |
-          node ros2-docker-generator/generate.js \
+          node ros2-docker-gen/CI/generate.js \
             --distro   "${{ inputs.distro }}" \
             --variant  "${{ inputs.variant }}" \
             --tools    "bashrc,locale,sudo" \
@@ -82,6 +82,6 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO="${{ inputs.distro }}" \
             -e CI_TEST_SUITE=base \
-            -v "${{ github.workspace }}/ros2-docker-generator/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/ros2-docker-gen/CI/validate.sh:/validate.sh:ro" \
             ros2-test-base-${{ inputs.distro }}-${{ inputs.variant }}:ci \
             bash /validate.sh

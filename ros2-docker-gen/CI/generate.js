@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // =============================================================
-// ros2-docker-generator/generate.js
+// ros2-docker-gen/CI/generate.js
 // Generates Dockerfile + docker-compose.yml for a given config.
 // Used by CI to produce files that are then built + tested.
 //
 // Usage:
-//   node ros2-docker-generator/generate.js --distro humble --variant ros-base --out /tmp/test-humble-base
-//   node ros2-docker-generator/generate.js --distro jazzy  --variant desktop  --out /tmp/test-jazzy-desktop
+//   node ros2-docker-gen/CI/generate.js --distro humble --variant ros-base --out /tmp/test-humble-base
+//   node ros2-docker-gen/CI/generate.js --distro jazzy  --variant desktop  --out /tmp/test-jazzy-desktop
 //
 // All flags:
 //   --distro    humble | jazzy | kilted
@@ -21,7 +21,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const core = require('./core.js');
+const core = require('../src/core.js');
 
 // ── Parse args ────────────────────────────────────────────────
 const args = process.argv.slice(2);

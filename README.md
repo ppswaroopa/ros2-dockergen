@@ -9,7 +9,7 @@ A collection of tools and environments for ROS 2 development.
 
 ## Project Structure
 
-- `ros2-docker-generator/`: Contains the logic, generation scripts, and validation suite for the Docker generator.
+- `ros2-docker-gen/`: Contains the logic, generation scripts, and validation suite for the Docker generator.
 - `reference-container/`: A standalone Dockerized ROS 2 development environment.
 - `.github/workflows/`: Automated CI pipeline that validates the generator across multiple distros and configurations.
 
