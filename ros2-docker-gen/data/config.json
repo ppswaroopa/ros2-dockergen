@@ -1,0 +1,377 @@
+{
+  "_comment": "ros2-docker-gen shared configuration — consumed by both core.js (web) and core.py (CLI). Do not encode logic in either consumer; encode it here as rules.",
+
+  "version": "1.0.0",
+
+  "distros": {
+    "jazzy": {
+      "label": "Jazzy",
+      "ubuntu": "24.04",
+      "ubuntu_codename": "noble",
+      "ubuntu_image_suffix": "ubuntu24.04",
+      "cuda_version": "12.4.1",
+      "recommended": true
+    },
+    "humble": {
+      "label": "Humble",
+      "ubuntu": "22.04",
+      "ubuntu_codename": "jammy",
+      "ubuntu_image_suffix": "ubuntu22.04",
+      "cuda_version": "12.3.1",
+      "recommended": false
+    },
+    "kilted": {
+      "label": "Kilted",
+      "ubuntu": "24.04",
+      "ubuntu_codename": "noble",
+      "ubuntu_image_suffix": "ubuntu24.04",
+      "cuda_version": "12.4.1",
+      "recommended": false
+    }
+  },
+
+  "variants": {
+    "ros-core": {
+      "label": "ros-core",
+      "description": "Minimal — no GUI, just core ROS2 libraries",
+      "base_image": "ros:{distro}-ros-core"
+    },
+    "ros-base": {
+      "label": "ros-base",
+      "description": "Core + basic CLI tools (rcl, rclcpp, common pkgs)",
+      "base_image": "ros:{distro}-ros-base"
+    },
+    "desktop": {
+      "label": "desktop",
+      "description": "Full desktop stack — rqt, RViz2, demos",
+      "base_image": "osrf/ros:{distro}-desktop"
+    },
+    "desktop-full": {
+      "label": "desktop-full",
+      "description": "Desktop + extra simulation and sensor packages",
+      "base_image": "osrf/ros:{distro}-desktop",
+      "_comment": "OSRF does not publish a desktop-full tag; we use desktop as FROM and install desktop-full on top",
+      "extra_apt": ["ros-{distro}-desktop-full"]
+    }
+  },
+
+  "ros_packages": {
+    "nav2": {
+      "label": "Nav2",
+      "description": "Autonomous navigation stack",
+      "apt": [
+        "ros-{distro}-navigation2",
+        "ros-{distro}-nav2-bringup"
+      ]
+    },
+    "slam_toolbox": {
+      "label": "SLAM Toolbox",
+      "description": "2D/3D mapping and localisation",
+      "apt": [
+        "ros-{distro}-slam-toolbox"
+      ]
+    },
+    "cartographer": {
+      "label": "Cartographer",
+      "description": "Google SLAM — lidar-based mapping",
+      "apt": [
+        "ros-{distro}-cartographer",
+        "ros-{distro}-cartographer-ros"
+      ]
+    },
+    "gazebo": {
+      "label": "Gazebo Classic",
+      "description": "Classic simulation (Humble only — EOL on Ubuntu 24.04+)",
+      "apt": [
+        "ros-{distro}-gazebo-ros-pkgs",
+        "ros-{distro}-gazebo-ros2-control"
+      ],
+      "skip_on_distros": ["jazzy", "kilted"],
+      "_skip_reason": "Gazebo Classic is EOL on Ubuntu 24.04 and above"
+    },
+    "gz_sim": {
+      "label": "Gazebo (gz-sim)",
+      "description": "Modern Gazebo — Jazzy / Kilted",
+      "apt": [
+        "ros-{distro}-ros-gz"
+      ]
+    },
+    "rviz2": {
+      "label": "RViz2",
+      "description": "3D visualisation tool",
+      "apt": [
+        "ros-{distro}-rviz2",
+        "ros-{distro}-rviz-common"
+      ]
+    },
+    "turtlebot3": {
+      "label": "TurtleBot3",
+      "description": "TB3 robot packages + simulations",
+      "apt": [
+        "ros-{distro}-turtlebot3",
+        "ros-{distro}-turtlebot3-msgs"
+      ],
+      "extra_apt_on_distros": {
+        "distros": ["humble"],
+        "apt": ["ros-{distro}-turtlebot3-simulations"]
+      },
+      "_extra_apt_reason": "turtlebot3-simulations only exists for Humble; Jazzy/Kilted dropped it",
+      "env": {
+        "TURTLEBOT3_MODEL": "waffle_pi"
+      }
+    },
+    "moveit2": {
+      "label": "MoveIt2",
+      "description": "Motion planning and manipulation",
+      "apt": [
+        "ros-{distro}-moveit"
+      ]
+    },
+    "ros2_control": {
+      "label": "ros2_control",
+      "description": "Hardware abstraction and controllers",
+      "apt": [
+        "ros-{distro}-ros2-control",
+        "ros-{distro}-ros2-controllers"
+      ]
+    },
+    "pcl": {
+      "label": "PCL",
+      "description": "Point-cloud processing library",
+      "apt": [
+        "ros-{distro}-perception-pcl",
+        "ros-{distro}-pcl-ros"
+      ]
+    },
+    "cv_bridge": {
+      "label": "cv_bridge",
+      "description": "OpenCV ↔ ROS2 image bridge",
+      "apt": [
+        "ros-{distro}-cv-bridge",
+        "ros-{distro}-image-transport",
+        "python3-opencv"
+      ]
+    },
+    "tf2": {
+      "label": "TF2",
+      "description": "Coordinate transform library",
+      "apt": [
+        "ros-{distro}-tf2-tools",
+        "ros-{distro}-tf-transformations"
+      ]
+    },
+    "cyclone_dds": {
+      "label": "CycloneDDS",
+      "description": "Eclipse Cyclone DDS middleware (alternative RMW)",
+      "apt": [
+        "ros-{distro}-rmw-cyclonedds-cpp"
+      ],
+      "env": {
+        "RMW_IMPLEMENTATION": "rmw_cyclonedds_cpp"
+      }
+    },
+    "rosbridge": {
+      "label": "ROSBridge",
+      "description": "WebSocket bridge for web / remote clients",
+      "apt": [
+        "ros-{distro}-rosbridge-suite"
+      ]
+    },
+    "cuda": {
+      "label": "CUDA",
+      "description": "NVIDIA GPU compute — switches the base image to nvidia/cuda",
+      "apt": [],
+      "switches_base_image": true,
+      "_comment": "No apt packages; presence triggers nvidia/cuda base image substitution"
+    },
+    "tensorrt": {
+      "label": "TensorRT",
+      "description": "NVIDIA TensorRT inference engine — implies CUDA base image",
+      "apt": [],
+      "switches_base_image": true,
+      "_comment": "No apt packages; presence triggers nvidia/cuda base image substitution"
+    }
+  },
+
+  "tools": {
+    "colcon": {
+      "label": "colcon",
+      "description": "ROS2 build system",
+      "default": true,
+      "ros_build_tool": true,
+      "apt": [
+        "python3-colcon-common-extensions",
+        "python3-colcon-mixin"
+      ]
+    },
+    "rosdep": {
+      "label": "rosdep",
+      "description": "Automatic ROS dependency installer",
+      "default": true,
+      "ros_build_tool": true,
+      "apt": [
+        "python3-rosdep"
+      ],
+      "post_install_run": "rosdep init || true && rosdep update --rosdistro {distro}"
+    },
+    "python3": {
+      "label": "python3",
+      "description": "Python 3, pip, venv, setuptools",
+      "default": true,
+      "apt": [
+        "python3",
+        "python3-pip",
+        "python3-venv",
+        "python3-setuptools"
+      ]
+    },
+    "git": {
+      "label": "git",
+      "description": "Git version control",
+      "default": true,
+      "apt": [
+        "git"
+      ]
+    },
+    "cmake": {
+      "label": "cmake",
+      "description": "CMake + gcc/g++ build toolchain",
+      "default": false,
+      "apt": [
+        "cmake",
+        "build-essential",
+        "gcc",
+        "g++"
+      ]
+    },
+    "nano": {
+      "label": "nano/vim",
+      "description": "Terminal text editors",
+      "default": false,
+      "apt": [
+        "nano",
+        "vim"
+      ]
+    },
+    "tmux": {
+      "label": "tmux",
+      "description": "Terminal multiplexer for multi-pane sessions",
+      "default": false,
+      "apt": [
+        "tmux"
+      ]
+    },
+    "gdb": {
+      "label": "gdb",
+      "description": "GNU debugger + gdbserver",
+      "default": false,
+      "apt": [
+        "gdb",
+        "gdbserver"
+      ]
+    },
+    "net_tools": {
+      "label": "net-tools",
+      "description": "Network utilities (ping, curl, wget, iproute2)",
+      "default": false,
+      "apt": [
+        "net-tools",
+        "iproute2",
+        "iputils-ping",
+        "curl",
+        "wget"
+      ]
+    },
+    "vcstool": {
+      "label": "vcstool",
+      "description": "VCS workspace management (vcs import/export)",
+      "default": false,
+      "apt": [
+        "python3-vcstool"
+      ]
+    },
+    "ssh": {
+      "label": "ssh",
+      "description": "OpenSSH server — exposes port 22",
+      "default": false,
+      "apt": [
+        "openssh-server"
+      ],
+      "expose_port": 22,
+      "compose_port": "2222:22",
+      "post_install_run": "mkdir /var/run/sshd && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config"
+    },
+    "x11": {
+      "label": "x11",
+      "description": "X11 display forwarding for GUI apps",
+      "default": false,
+      "apt": [
+        "x11-apps",
+        "libx11-dev"
+      ],
+      "env": {
+        "DISPLAY": "${DISPLAY:-:0}",
+        "QT_X11_NO_MITSHM": "1"
+      },
+      "compose_volumes": [
+        "/tmp/.X11-unix:/tmp/.X11-unix:rw"
+      ],
+      "compose_env": {
+        "DISPLAY": "${DISPLAY:-:0}",
+        "QT_X11_NO_MITSHM": "1"
+      }
+    },
+    "zsh": {
+      "label": "zsh",
+      "description": "Zsh shell + Oh-My-Zsh framework",
+      "default": false,
+      "apt": [
+        "zsh"
+      ],
+      "post_install_run": "sh -c \"$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended"
+    },
+    "locale": {
+      "label": "locale",
+      "description": "Configure UTF-8 locale (en_US.UTF-8)",
+      "default": true,
+      "locale_setup": true,
+      "apt": [
+        "locales"
+      ],
+      "post_install_run": "locale-gen en_US en_US.UTF-8 && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8",
+      "env": {
+        "LANG": "en_US.UTF-8"
+      }
+    },
+    "bashrc": {
+      "label": "bashrc",
+      "description": "Auto-source /opt/ros/<distro>/setup.bash on shell start",
+      "default": true,
+      "apt": []
+    },
+    "sudo": {
+      "label": "sudo",
+      "description": "Grant passwordless sudo to the container user (ignored for root)",
+      "default": false,
+      "apt": []
+    }
+  },
+
+  "system_apt_always": [
+    "software-properties-common",
+    "apt-transport-https",
+    "ca-certificates"
+  ],
+
+  "ros_build_tools_always": [
+    "python3-rosinstall-generator"
+  ],
+
+  "cuda_base_image": "nvidia/cuda:{cuda_version}-devel-{ubuntu_image_suffix}",
+
+  "cuda_ros_install_apt": [
+    "curl",
+    "gnupg2",
+    "lsb-release"
+  ]
+}

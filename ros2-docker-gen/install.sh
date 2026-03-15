@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# ROS2 Docker Generator CLI — Installer
+# ros2-docker-gen — Installer
 #
 # Usage (from inside the cloned repo):
 #   ./install.sh
 #
-# Usage (remote, once published to npm):
+# Usage (remote, once the repo is public):
 #   curl -fsSL https://raw.githubusercontent.com/YOUR_USER/ros2-docker-gen/main/install.sh | bash
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 PACKAGE_NAME="ros2-docker-gen"
-MIN_NODE_MAJOR=18
+MIN_PYTHON_MINOR=10
+INSTALL_DIR="/usr/local/lib/${PACKAGE_NAME}"
+BIN_LINK="/usr/local/bin/${PACKAGE_NAME}"
 
-# ── Colours ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'
 BOLD='\033[1m'; RESET='\033[0m'
-info()    { echo -e "${CYAN}[ros2-docker-gen]${RESET} $*"; }
-success() { echo -e "${GREEN}[ros2-docker-gen]${RESET} $*"; }
-warn()    { echo -e "${RED}[ros2-docker-gen] WARN:${RESET} $*"; }
-die()     { echo -e "${RED}[ros2-docker-gen] ERROR:${RESET} $*" >&2; exit 1; }
+info()    { echo -e "${CYAN}[${PACKAGE_NAME}]${RESET} $*"; }
+success() { echo -e "${GREEN}[${PACKAGE_NAME}]${RESET} $*"; }
+warn()    { echo -e "${RED}[${PACKAGE_NAME}] WARN:${RESET} $*"; }
+die()     { echo -e "${RED}[${PACKAGE_NAME}] ERROR:${RESET} $*" >&2; exit 1; }
 
 echo ""
 echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════════╗${RESET}"
@@ -28,8 +29,6 @@ echo -e "${BOLD}${CYAN}╚══════════════════
 echo ""
 
 # ── 1. Locate the repo root ───────────────────────────────────────────────────
-# BASH_SOURCE[0] is the script path when run as ./install.sh or bash install.sh.
-# When piped from curl it is unset/empty — we detect that and skip local install.
 SCRIPT_DIR=""
 LOCAL_INSTALL=false
 
@@ -37,70 +36,81 @@ if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
 
-if [[ -n "${SCRIPT_DIR}" && -f "${SCRIPT_DIR}/package.json" && -f "${SCRIPT_DIR}/bin/cli.js" ]]; then
+if [[ -n "${SCRIPT_DIR}"                              \
+   && -f "${SCRIPT_DIR}/bin/${PACKAGE_NAME}"          \
+   && -f "${SCRIPT_DIR}/src/core.py"                  \
+   && -f "${SCRIPT_DIR}/data/config.json" ]]; then
     LOCAL_INSTALL=true
     info "Detected local repo at: ${SCRIPT_DIR}"
 fi
 
-# ── 2. Check for Node.js ──────────────────────────────────────────────────────
-info "Checking Node.js..."
-if ! command -v node &>/dev/null; then
-    info "Node.js not found — installing LTS via NodeSource..."
+# ── 2. Check for Python 3.10+ ────────────────────────────────────────────────
+info "Checking Python 3..."
+
+PYTHON=""
+for candidate in python3 python3.13 python3.12 python3.11 python3.10; do
+    if command -v "${candidate}" &>/dev/null; then
+        minor=$("${candidate}" -c "import sys; print(sys.version_info.minor)")
+        major=$("${candidate}" -c "import sys; print(sys.version_info.major)")
+        if [[ "${major}" -eq 3 && "${minor}" -ge "${MIN_PYTHON_MINOR}" ]]; then
+            PYTHON="${candidate}"
+            break
+        fi
+    fi
+done
+
+if [[ -z "${PYTHON}" ]]; then
+    info "Python 3.${MIN_PYTHON_MINOR}+ not found — installing via apt..."
     if command -v apt-get &>/dev/null; then
-        curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-        sudo apt-get install -y nodejs
-    elif command -v dnf &>/dev/null; then
-        curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
-        sudo dnf install -y nodejs
+        sudo apt-get update -qq
+        sudo apt-get install -y python3
+        PYTHON="python3"
     else
-        die "Cannot auto-install Node.js. Install Node.js >= ${MIN_NODE_MAJOR} from https://nodejs.org and re-run."
+        die "Please install Python 3.${MIN_PYTHON_MINOR}+ and re-run."
     fi
 fi
 
-NODE_MAJOR=$(node -e "process.stdout.write(String(process.versions.node.split('.')[0]))")
-if [ "${NODE_MAJOR}" -lt "${MIN_NODE_MAJOR}" ]; then
-    die "Node.js >= ${MIN_NODE_MAJOR} required (found v${NODE_MAJOR}). Please upgrade."
-fi
-success "Node.js $(node --version) — OK"
+success "$("${PYTHON}" --version) — OK"
 
-# ── 3. Check for npm ──────────────────────────────────────────────────────────
-command -v npm &>/dev/null || die "npm not found. Please install npm."
-success "npm $(npm --version) — OK"
+# ── 3. Install ────────────────────────────────────────────────────────────────
+do_install() {
+    local src="$1"
+    sudo mkdir -p "${INSTALL_DIR}"
+    sudo cp -r "${src}/src"  "${INSTALL_DIR}/"
+    sudo cp -r "${src}/data" "${INSTALL_DIR}/"
+    sudo cp -r "${src}/bin"  "${INSTALL_DIR}/"
+    sudo chmod +x "${INSTALL_DIR}/bin/${PACKAGE_NAME}"
+    sudo sed -i "1s|.*|#!${PYTHON}|" "${INSTALL_DIR}/bin/${PACKAGE_NAME}"
+    sudo ln -sf "${INSTALL_DIR}/bin/${PACKAGE_NAME}" "${BIN_LINK}"
+}
 
-# ── 4. Install ────────────────────────────────────────────────────────────────
-if [ "${LOCAL_INSTALL}" = true ]; then
-    # Running from inside the cloned repo — link it directly, no network needed
-    info "Installing from local repo (npm link)..."
-    cd "${SCRIPT_DIR}"
-    if npm link 2>/dev/null; then
-        success "Linked ${PACKAGE_NAME} from local repo."
-    else
-        sudo npm link
-        success "Linked ${PACKAGE_NAME} from local repo (used sudo)."
-    fi
+if [[ "${LOCAL_INSTALL}" = true ]]; then
+    info "Installing from local repo..."
+    do_install "${SCRIPT_DIR}"
+    success "Installed to ${INSTALL_DIR}"
 else
-    # Running via curl pipe — install from npm registry
-    info "Installing ${PACKAGE_NAME} from npm registry..."
-    if npm install -g "${PACKAGE_NAME}" 2>/dev/null; then
-        success "${PACKAGE_NAME} installed from npm."
-    else
-        die "npm install failed. If you have the repo cloned locally, run ./install.sh from inside it instead of piping from curl."
-    fi
+    info "Remote install — cloning repository..."
+    command -v git &>/dev/null || {
+        command -v apt-get &>/dev/null && sudo apt-get install -y git \
+            || die "git is required for remote install."
+    }
+    CLONE_DIR="$(mktemp -d)"
+    git clone --depth 1 "https://github.com/YOUR_USER/${PACKAGE_NAME}.git" "${CLONE_DIR}"
+    do_install "${CLONE_DIR}"
+    rm -rf "${CLONE_DIR}"
+    success "Installed to ${INSTALL_DIR}"
 fi
 
-# ── 5. Verify & PATH hint ─────────────────────────────────────────────────────
+# ── 4. Verify ─────────────────────────────────────────────────────────────────
 echo ""
-if command -v ros2-docker-gen &>/dev/null; then
+if command -v "${PACKAGE_NAME}" &>/dev/null; then
     success "✅  Installation complete!"
     echo ""
-    echo -e "  Run ${BOLD}${CYAN}ros2-docker-gen${RESET} anywhere to generate your Docker setup."
+    echo -e "  Run ${BOLD}${CYAN}${PACKAGE_NAME}${RESET} to generate your Docker setup."
+    echo -e "  Run ${BOLD}${CYAN}${PACKAGE_NAME} --help${RESET} for usage details."
     echo ""
 else
-    warn "Command not found in PATH yet. Add npm's global bin to your shell:"
-    echo ""
-    echo "   echo 'export PATH=\"\$(npm prefix -g)/bin:\$PATH\"' >> ~/.bashrc"
-    echo "   source ~/.bashrc"
-    echo ""
-    echo -e "  Then run: ${BOLD}${CYAN}ros2-docker-gen${RESET}"
+    warn "Command not in PATH. Add /usr/local/bin if needed:"
+    echo "    echo 'export PATH=\"/usr/local/bin:\$PATH\"' >> ~/.bashrc && source ~/.bashrc"
     echo ""
 fi

@@ -1,333 +1,150 @@
-# Portfolio — Pranava Swaroopa
+# 🤖 ros2-docker-gen
 
-Personal portfolio site hosted on GitHub Pages, including the **ROS2 Docker Generator** —
-a browser-based tool for generating ROS2 Docker environments without needing to know Docker.
-
-Live at: `https://<username>.github.io`
+> **One command. Interactive. Zero fuss.**  
+> Generate production-ready `Dockerfile` + `docker-compose.yml` + `README.md` for any ROS2 project — straight from your terminal.
 
 ---
 
-## Repository Structure
+## ✨ Features
+
+- Supports **Jazzy**, **Humble**, **Kilted** distros
+- Chooses the right base image (`ros:`, `osrf/ros:`, or `nvidia/cuda:`)
+- Configures **ROS2 packages**: Nav2, MoveIt2, SLAM Toolbox, RViz2, TurtleBot3, PCL, cv_bridge, CycloneDDS, ROSBridge, Gazebo, gz-sim, TensorRT, CUDA…
+- Configures **dev tools**: colcon, rosdep, cmake, git, tmux, gdb, zsh + Oh-My-Zsh, X11, SSH, net-tools…
+- Handles **non-root users** with correct UID/GID mapping
+- Emits a matching `docker-compose.yml` with GPU / X11 / SSH support
+- Prints a **README.md** with your exact next steps
+- **No external dependencies** — requires only Python 3.10+, which ships on Ubuntu 22.04 and 24.04
+
+---
+
+## 📦 Install
+
+### Requirements
+
+| Requirement    | Version |
+|----------------|---------|
+| Ubuntu         | 22.04 or 24.04 (or any Linux with Python 3.10+) |
+| Python         | ≥ 3.10 (pre-installed on Ubuntu 22.04+) |
+| Docker         | ≥ 24 |
+| docker compose | v2+  |
+
+### Option A — One-line installer (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/YOUR_USER/ros2-docker-gen/main/install.sh | bash
+```
+
+The script will:
+1. Check for Python 3.10+ (already present on Ubuntu 22.04/24.04 — no install needed)
+2. Copy the tool to `/usr/local/lib/ros2-docker-gen/`
+3. Create a `/usr/local/bin/ros2-docker-gen` symlink
+
+### Option B — Clone and install locally
+
+```bash
+git clone https://github.com/YOUR_USER/ros2-docker-gen.git
+cd ros2-docker-gen
+./install.sh
+```
+
+### Option C — Run directly without installing
+
+```bash
+git clone https://github.com/YOUR_USER/ros2-docker-gen.git
+cd ros2-docker-gen
+python3 bin/ros2-docker-gen
+```
+
+---
+
+## 🚀 Usage
+
+```bash
+ros2-docker-gen          # start the interactive wizard
+ros2-docker-gen --help   # show help
+ros2-docker-gen --version
+```
+
+The wizard walks you through 8 steps:
+
+| Step | Prompt |
+|------|--------|
+| 1 | ROS2 distro (Jazzy / Humble / Kilted) |
+| 2 | Base image variant (ros-core / ros-base / desktop / desktop-full) |
+| 3 | ROS2 packages to include |
+| 4 | Dev tools to include |
+| 5 | User type (non-root recommended) |
+| 6 | Username & UID |
+| 7 | Workspace path & container name |
+| 8 | Output directory |
+
+Then writes three files:
 
 ```
-.
-│   .gitignore
-│   index.html                          # Portfolio landing page
-│   index.html          # ROS2 Docker Generator — standalone tool
-│
+./your-container-name/
+├── Dockerfile
+├── docker-compose.yml
+└── README.md
+```
+
+**Navigation:**
+- Type a number and press Enter to select
+- `1,3,5` — select multiple items
+- `a` — select all, `n` — select none
+- Enter — keep the shown default
+- `q` — quit at any prompt (no files written)
+
+---
+
+## 📁 Project structure
+
+```
+ros2-docker-gen/
+├── bin/
+│   └── ros2-docker-gen     ← executable entry point (Python)
 ├── src/
-│   ├── css/
-│   │   └── style.css                   # Portfolio styles
-│   ├── script/
-│   │   └── script.js                   # Portfolio scripts
-│   ├── images/                         # All portfolio images and assets
-│   ├── font/                           # Custom fonts
-│   └── documents/                      # CV and presentation PDFs
-│
-├── ros2-docker-gen/
-│   ├── src/
-│   │   ├── core.js                 # Shared logic (generated components)
-│   │   └── CI/
-│   │       ├── generate.js         # Dockerfile + Compose generation (Node.js)
-│   │       └── validate.sh         # CI validator script
-│   └── README.md                   # This file
-│
-└── .github/
-    └── workflows/
-        ├── ci.yml                      # Main CI orchestrator — path-filtered, calls reusable workflows
-        ├── _test-base.yml              # Tests ROS2 installs correctly per distro
-        ├── _test-build-tools.yml       # Tests dev tool apt packages (colcon, git, cmake, etc.)
-        ├── _test-user-setup.yml        # Tests user creation (custom user vs root — 2 cases only)
-        ├── _test-gui.yml               # Tests GUI packages (RViz2, Gazebo) using Xvfb virtual display
-        └── _test-nvidia.yml            # Tests CUDA base image + ROS2 on top
+│   ├── core.py             ← Python renderer — used by CLI
+│   └── core.js             ← JavaScript renderer — used by web UI
+├── data/
+│   └── config.json         ← single source of truth (all rules and package data)
+├── tests/
+│   └── test_parity.py      ← ensures core.py and core.js produce identical output
+├── install.sh
+└── README.md
 ```
 
-The `ros2-docker-gen/` folder and `.github/` workflows relate exclusively to testing `index.html`.
-The rest of the portfolio (`index.html`, `src/`) is static and has no CI.
+### How it works
+
+All package knowledge — which distros exist, which packages map to which apt names,
+which packages skip on certain distros, what environment variables to set — lives in
+`data/config.json`. Neither `core.py` nor `core.js` contain hardcoded rules; they
+only read the config and render output strings from it.
+
+This means the web UI and CLI share the same knowledge base. To add a new package
+or distro, you edit `config.json` once and both tools update automatically.
+
+### Running the parity tests
+
+```bash
+# Requires both Python 3 and Node.js to be installed
+python3 tests/test_parity.py
+```
+
+This runs 6 fixture configurations through both `core.py` and `core.js` and
+asserts byte-for-byte identical output. Run it any time you edit `config.json`
+or either renderer.
 
 ---
 
-## The ROS2 Docker Generator
+## 🔗 Related
 
-`index.html` is a fully self-contained single-page app — no build step,
-no backend, no dependencies. It generates files entirely in the browser using JavaScript.
-Nothing is sent to any server.
-
-A user visits the page, picks their ROS2 distro, selects packages and dev tools, configures
-their user, and downloads a `Dockerfile` + `docker-compose.yml` they can use immediately.
-The goal is to remove the friction of getting started with ROS2 on Docker, especially for
-Windows users using WSL2.
-
-### How it links from the portfolio
-
-`index.html` links to `index.html` as a project entry. Both files sit at the
-repo root so GitHub Pages serves them both at the same base URL:
-
-```
-https://<username>.github.io/index.html                    ← portfolio
-https://<username>.github.io/index.html    ← generator tool
-```
+- [ROS2 Docker Generator Web UI](https://your-site.com) — same config.json, browser-based
+- [OSRF ROS Docker images](https://hub.docker.com/r/osrf/ros)
+- [ROS2 documentation](https://docs.ros.org)
 
 ---
 
-## How the CI Works
+## License
 
-### The Problem
-
-The generator produces Dockerfiles dynamically. To know they actually work, CI must build
-and run them as real Docker images. But testing every possible combination of options would
-be extremely slow — most combinations are redundant.
-
-### Design Principle: Test by Concern, Not by Combination
-
-CI is structured around the insight that the generator works in independent layers.
-Each layer only needs to be tested once, not once per distro or per package combination:
-
-| Layer | Why it's independent | Tested in |
-|---|---|---|
-| **Base image** | Package names differ per distro, so this runs per distro | `_test-base.yml` |
-| **Build tools** | Just `apt-get install` lines — same syntax on all distros | `_test-build-tools.yml` — once |
-| **User setup** | Only 2 possible outcomes: root or custom user | `_test-user-setup.yml` — 2 cases |
-| **GUI packages** | Binaries either install or they don't; tested with a virtual display | `_test-gui.yml` — once |
-| **NVIDIA** | Completely different base image, separate concern | `_test-nvidia.yml` — once |
-
-For example: once `colcon` is confirmed to install and run on Humble, there is no new
-information to be gained by installing it again on Jazzy. The `apt-get install` command
-is structurally identical. Only the base image layer needs per-distro jobs.
-
-### Path Filtering — What Triggers What
-
-The `ci.yml` orchestrator runs a `changes` job first, which uses `dorny/paths-filter` to
-detect which files changed in the push. Downstream jobs only run if their relevant files changed.
-
-| Files changed in the push | Jobs that run |
-|---|---|
-| `index.html` | `base-humble` smoke check only |
-| `ros2-docker-gen/src/CI/generate.js` | All suites — generation logic changed, everything must re-verify |
-| `ros2-docker-gen/src/CI/validate.sh` | All suites — the validator itself changed |
-| `.github/workflows/_test-nvidia.yml` only | `nvidia` only |
-| `.github/workflows/_test-user-setup.yml` only | `user-setup` only |
-
-A typical portfolio update (editing `style.css`, swapping an image) runs the smoke check
-in ~3 minutes. A change to `generate.js` runs the full suite in ~30–45 minutes.
-
-### Reusable Workflows
-
-Each `_test-*.yml` file is a **reusable workflow**. It cannot be triggered directly by a push —
-it can only be called by another workflow using the `uses:` key:
-
-```yaml
-# Inside ci.yml:
-base-humble:
-  uses: ./.github/workflows/_test-base.yml
-  with:
-    distro: humble
-    variant: ros-base
-```
-
-The leading `_` in the filename is a convention that signals "internal, not a standalone
-entrypoint." GitHub treats it identically to any other workflow file.
-
-### validate.sh — One Script, Five Modes
-
-`ros2-docker-gen/src/CI/validate.sh` reads a `CI_TEST_SUITE` environment variable and runs only the checks
-relevant to that concern. Each job passes a different value:
-
-```bash
-docker run -e CI_TEST_SUITE=base    ...   # checks ROS2 CLI works
-docker run -e CI_TEST_SUITE=user    ...   # checks username, UID, workspace, sudo
-docker run -e CI_TEST_SUITE=gui     ...   # checks DISPLAY env, rviz2 binary, gz binary
-docker run -e CI_TEST_SUITE=nvidia  ...   # checks CUDA dirs, NVIDIA env vars
-```
-
-This keeps failure messages precise. If the `user` suite fails, you know the `useradd`
-or workspace ownership logic in `generate.js` is broken — nothing else.
-
-### The `all-passed` Gate Job
-
-The last job in `ci.yml` always runs regardless of what else was skipped. It checks the
-result of every upstream job and fails if any had a result of `failure` or `cancelled`.
-A result of `skipped` (path filter didn't match) is treated as passing.
-
-This job is what you configure as a **required status check** in GitHub branch protection
-settings — it gives you a single named check to require without needing to list every
-individual job.
-
----
-
-## Running Tests Locally with `act`
-
-[`act`](https://github.com/nektos/act) runs GitHub Actions workflows on your local machine
-using Docker. This lets you iterate on CI without pushing to GitHub every time.
-
-### Install act
-
-```bash
-# macOS
-brew install act
-
-# Windows (WSL2 or Git Bash)
-# Download the latest binary from https://github.com/nektos/act/releases
-# and place it somewhere on your PATH, e.g. C:\tools\act.exe
-```
-
-`act` requires Docker to be running. Since you already have Docker Desktop, nothing
-extra is needed.
-
-### First run — choose your runner image
-
-On first run, `act` asks which Docker image to use to simulate the GitHub runner.
-Choose **Medium** when prompted — it's a good balance of size and compatibility:
-
-```
-? Please choose the default image you want to use with act:
-  - Micro    (fastest, but missing many tools)
-  - Medium   (recommended)  ← choose this
-  - Large    (closest to GitHub's actual runner, ~18GB)
-```
-
-This choice is saved to `~/.actrc` and won't be asked again.
-
-### Run a specific workflow job
-
-```bash
-# From the repo root — simulate a push to main and run only the base-humble job
-act push --job base-humble
-
-# Run the user-setup job
-act push --job user-setup
-
-# Run the build-tools job
-act push --job build-tools
-```
-
-### Run the full CI workflow
-
-```bash
-# Run everything (as if you pushed to main)
-act push
-
-# Force all suites to run regardless of path filters
-act workflow_dispatch --input run_all=true
-```
-
-### Run a single test suite manually (without act)
-
-If you just want to test one thing quickly without act's overhead:
-
-```bash
-# 1. Generate the Dockerfile for the config you want to test
-node ros2-docker-gen/src/CI/generate.js \
-  --distro   humble \
-  --variant  ros-base \
-  --tools    "colcon,rosdep,python3,git,bashrc,locale,sudo" \
-  --username ros-dev \
-  --uid      1000 \
-  --out      ./build-context
-
-# 2. Build it
-docker build -t ros2-test:local ./build-context
-
-# 3. Run the validator for the suite you care about
-docker run --rm \
-  -e ROS_DISTRO=humble \
-  -e CI_TEST_SUITE=base \
-  -v "$PWD/ros2-docker-gen/src/CI/validate.sh:/validate.sh:ro" \
-  ros2-test:local bash /validate.sh
-
-# User suite (custom user)
-docker run --rm \
-  -e ROS_DISTRO=humble \
-  -e CI_TEST_SUITE=user \
-  -e EXPECTED_USER=ros-dev \
-  -e EXPECTED_UID=1000 \
-  -e EXPECT_SUDO=true \
-  -v "$PWD/ros2-docker-gen/src/CI/validate.sh:/validate.sh:ro" \
-  ros2-test:local bash /validate.sh
-
-# Build tools suite
-docker run --rm \
-  -e ROS_DISTRO=humble \
-  -e CI_TEST_SUITE=build-tools \
-  -v "$PWD/ros2-docker-gen/src/CI/validate.sh:/validate.sh:ro" \
-  ros2-test:local bash /validate.sh
-```
-
-### act known limitations
-
-- **Reusable workflows** (`uses: ./.github/workflows/_test-base.yml`) have limited support
-  in `act`. If a job using `uses:` fails unexpectedly locally, test the inner workflow
-  directly using the manual `docker run` approach above, then push to GitHub to confirm
-  the full orchestration works.
-
-- **Path filtering** (`dorny/paths-filter`) works differently locally since `act` doesn't
-  have a real git diff to compare. Use `act workflow_dispatch --input run_all=true` to
-  bypass filters and force everything to run.
-
----
-
-## Adding a New ROS2 Package to the Generator
-
-When you add a new package option, you must update **two places** — the UI and the CI
-generator. They implement the same logic independently (see Known Limitations below).
-
-1. **`index.html`** — add the option card in the packages step and add
-   the entry to the `rosPkgMap` object in the `buildDockerfile()` function.
-
-2. **`ros2-docker-gen/src/CI/generate.js`** — add the same entry to the `getRosPackages()` function.
-
-Before committing, verify the apt package name actually exists for each distro you support:
-
-```bash
-# Search for a package name on Humble
-docker run --rm ros:humble-ros-base \
-  bash -c "apt-get update -qq && apt-cache search ros-humble-<package-name>"
-
-# Search on Jazzy
-docker run --rm ros:jazzy-ros-base \
-  bash -c "apt-get update -qq && apt-cache search ros-jazzy-<package-name>"
-```
-
-If the package name differs between distros (or doesn't exist on one of them), handle it
-with a distro conditional in `getRosPackages()` — the same pattern already used for
-`turtlebot3-simulations` and `gazebo`.
-
----
-
-## GitHub Pages Setup
-
-Both HTML files are served directly from the repo root. No build step is needed.
-
-1. Repo → **Settings → Pages**
-2. Source: `Deploy from a branch`
-3. Branch: `main`, folder: `/ (root)`
-4. Save
-
-GitHub Pages will serve every `.html` file at the root automatically. Adding a new tool
-page is as simple as dropping another `.html` file in the root and linking to it from
-`index.html`.
-
----
-
-## Known Limitations
-
-**Shared generation logic** — The Dockerfile generation logic is centralized in 
-`ros2-docker-gen/src/core.js`. Both `index.html` and `ros2-docker-gen/src/CI/generate.js` 
-load this module to ensure consistency.
-
-The long-term goal is to have the UI and CI use the exact same code via a shared 
-library, which is now partially achieved with `core.js`.
-
-**Jazzy + Gazebo Classic** — Gazebo Classic is not packaged for Ubuntu 24.04, which is
-what Jazzy uses. The generator produces an empty package list for this combination rather
-than erroring clearly. A future improvement would disable the Gazebo Classic card in the
-UI when Jazzy is selected.
-
-**NVIDIA CI can't test GPU runtime** — GitHub Actions runners have no GPU. The NVIDIA
-test suite confirms the CUDA base image builds and ROS2 installs on top of it, but cannot
-verify CUDA actually executes. Runtime GPU validation would require a self-hosted runner
-with an NVIDIA card.
-
-**GUI rendering is not tested** — The GUI suite uses Xvfb (a virtual framebuffer) to
-confirm that RViz2 and Gazebo binaries install and exist. It does not test that 3D
-rendering or physics simulation work correctly — that requires a real display.
+MIT
