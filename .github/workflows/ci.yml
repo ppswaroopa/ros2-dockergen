@@ -54,6 +54,8 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          # act doesn't always provide the base ref, so we fallback to main
+          base: ${{ github.base_ref || 'main' }}
           filters: |
             generator:
               - 'ros2-docker-gen/CI/generate.js'

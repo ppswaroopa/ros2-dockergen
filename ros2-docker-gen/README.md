@@ -32,7 +32,7 @@
 ### Option A — One-line installer (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/ros2-docker-gen/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ppswaroopa/ros2-docker-gen/main/install.sh | bash
 ```
 
 The script will:
@@ -43,7 +43,7 @@ The script will:
 ### Option B — Clone and install locally
 
 ```bash
-git clone https://github.com/YOUR_USER/ros2-docker-gen.git
+git clone https://github.com/ppswaroopa/ros2-docker-gen.git
 cd ros2-docker-gen
 ./install.sh
 ```
@@ -51,7 +51,7 @@ cd ros2-docker-gen
 ### Option C — Run directly without installing
 
 ```bash
-git clone https://github.com/YOUR_USER/ros2-docker-gen.git
+git clone https://github.com/ppswaroopa/ros2-docker-gen.git
 cd ros2-docker-gen
 python3 bin/ros2-docker-gen
 ```
