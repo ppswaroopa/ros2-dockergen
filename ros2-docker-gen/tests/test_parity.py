@@ -49,18 +49,22 @@ CASES = [
         "workspace": "/dev_ws", "container_name": "ros2-jazzy-dev"}},
 ]
 
-# The JS runner — written once at test start, uses __dirname for robust path resolution
+# The JS runner — Native ESM version
 RUNNER_PATH = ROOT / "tests" / "_runner.js"
 RUNNER_PATH.write_text(
-    "const path = require('path');\n"
+    "import * as CORE from '../src/core.js';\n"
+    "import fs from 'fs';\n"
+    "import path from 'path';\n"
+    "import { fileURLToPath } from 'url';\n"
+    "const __dirname = path.dirname(fileURLToPath(import.meta.url));\n"
     "const R = path.join(__dirname, '..');\n"
-    "const CORE = require(path.join(R, 'src', 'core.js'));\n"
-    "CORE.initFromFile(path.join(R, 'data', 'config.json'));\n"
+    "const config = JSON.parse(fs.readFileSync(path.join(R, 'data', 'config.json'), 'utf8'));\n"
+    "CORE.init(config);\n"
     "const raw = JSON.parse(process.argv[2]);\n"
     "const cfg = {\n"
     "    ...raw,\n"
-    "    packages:      new Set(raw.packages),\n"
-    "    tools:         new Set(raw.tools),\n"
+    "    packages:      raw.packages,\n"
+    "    tools:         raw.tools,\n"
     "    containerName: raw.container_name,\n"
     "    userType:      raw.user_type,\n"
     "};\n"
@@ -111,5 +115,5 @@ def run_all():
     return failed == 0
 
 if __name__ == "__main__":
-    print("\nParity tests — core.py vs core.js\n")
+    print("\nParity tests — core.py vs core.js (ESM)\n")
     sys.exit(0 if run_all() else 1)

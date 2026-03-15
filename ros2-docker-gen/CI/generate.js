@@ -1,27 +1,12 @@
 #!/usr/bin/env node
-// =============================================================
-// ros2-docker-gen/CI/generate.js
-// Generates Dockerfile + docker-compose.yml for a given config.
-// Used by CI to produce files that are then built + tested.
-//
-// Usage:
-//   node ros2-docker-gen/CI/generate.js --distro humble --variant ros-base --out /tmp/test-humble-base
-//   node ros2-docker-gen/CI/generate.js --distro jazzy  --variant desktop  --out /tmp/test-jazzy-desktop
-//
-// All flags:
-//   --distro    humble | jazzy | kilted
-//   --variant   ros-base | desktop | desktop-full
-//   --packages  comma-separated: nav2,slam_toolbox,turtlebot3,...
-//   --tools     comma-separated: colcon,rosdep,python3,git,x11,...
-//   --username  default: ros-dev
-//   --uid       default: 1000
-//   --workspace default: /home/<username>/ros2_ws
-//   --out       output directory (created if missing)
-// =============================================================
 
-const fs = require('fs');
-const path = require('path');
-const core = require('../src/core.js');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import * as CORE from '../src/core.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ── Parse args ────────────────────────────────────────────────
 const args = process.argv.slice(2);
@@ -35,16 +20,22 @@ const variant = getArg('variant', 'ros-base');
 const pkgArg = getArg('packages', '');
 const toolArg = getArg('tools', 'colcon,rosdep,python3,git,bashrc,locale,sudo');
 const username = getArg('username', 'ros-dev');
-const uid = getArg('uid', '1000');
+const uid = parseInt(getArg('uid', '1000'), 10);
 const outDir = getArg('out', './ci-output');
 const cname = getArg('container', 'ros2_dev');
-const userType = getArg('usertype', 'custom');
+const userType = getArg('usertype', 'user'); // Changed from 'custom' to match core.js expected values: 'user' | 'root'
+
+// ── Load Config & Init Core ───────────────────────────────────
+const _ROOT = path.join(__dirname, '..');
+const configPath = path.join(_ROOT, 'data', 'config.json');
+const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+CORE.init(configData);
 
 const config = {
   distro,
   variant,
-  packages: new Set(pkgArg ? pkgArg.split(',').map(s => s.trim()) : []),
-  tools: new Set(toolArg.split(',').map(s => s.trim())),
+  packages: pkgArg ? pkgArg.split(',').map(s => s.trim()) : [],
+  tools: toolArg.split(',').map(s => s.trim()),
   username,
   uid,
   userType,
@@ -66,15 +57,15 @@ if (!validVariants.includes(variant)) {
 }
 
 // ── Generate ──────────────────────────────────────────────────
-fs.mkdirSync(outDir, { recursive: true });
+if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
 const dockerfilePath = path.join(outDir, 'Dockerfile');
 const composePath = path.join(outDir, 'docker-compose.yml');
 const readmePath = path.join(outDir, 'README.md');
 
-fs.writeFileSync(dockerfilePath, core.buildDockerfile(config));
-fs.writeFileSync(composePath, core.buildCompose(config));
-fs.writeFileSync(readmePath, core.buildReadme(config));
+fs.writeFileSync(dockerfilePath, CORE.buildDockerfile(config));
+fs.writeFileSync(composePath, CORE.buildCompose(config));
+fs.writeFileSync(readmePath, CORE.buildReadme(config));
 
 console.log(`✓ Dockerfile    → ${dockerfilePath}`);
 console.log(`✓ compose       → ${composePath}`);

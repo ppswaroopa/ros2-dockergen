@@ -1,11 +1,29 @@
-# IDEs and OS
+# Node / Web
+node_modules/
+dist/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+.pytest_cache/
+
+# Docker Generated Outputs
+ros2-jazzy/
+ros2-humble/
+ros2-kilted/
+ros2-jazzy-cuda/
+ros2-humble-ssh/
+ros2-jazzy-dev/
+ros2-docker-gen/tests/_runner.cjs
+ros2-docker-gen/tests/_runner.js
+
+# Git / IDE and OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 *.swp
-
-# Node / Web (for the upcoming generator)
-node_modules/
-dist/
-.env
