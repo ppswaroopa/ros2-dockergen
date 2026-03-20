@@ -1,4 +1,4 @@
-# 🤖 ros2-docker-gen
+# 🤖 ros2-dockergen
 
 > **One command. Interactive. Zero fuss.**  
 > Generate production-ready `Dockerfile` + `docker-compose.yml` + `README.md` for any ROS2 project — straight from your terminal.
@@ -7,11 +7,11 @@
 
 ## ✨ Features
 
-- Supports **Jazzy**, **Humble**, **Kilted** distros
+- Supports **Jazzy**, **Humble**, **Kilted** ROS2 distributions
 - Chooses the right base image (`ros:`, `osrf/ros:`, or `nvidia/cuda:`)
 - Configures **ROS2 packages**: Nav2, MoveIt2, SLAM Toolbox, RViz2, TurtleBot3, PCL, cv_bridge, CycloneDDS, ROSBridge, Gazebo, gz-sim, TensorRT, CUDA…
 - Configures **dev tools**: colcon, rosdep, cmake, git, tmux, gdb, zsh + Oh-My-Zsh, X11, SSH, net-tools…
-- Handles **non-root users** with correct UID/GID mapping
+- Handles **non-root users** with UID/GID mapping
 - Emits a matching `docker-compose.yml` with GPU / X11 / SSH support
 - Prints a **README.md** with your exact next steps
 - **No external dependencies** — requires only Python 3.10+, which ships on Ubuntu 22.04 and 24.04
@@ -24,36 +24,34 @@
 
 | Requirement    | Version |
 |----------------|---------|
-| Ubuntu         | 22.04 or 24.04 (or any Linux with Python 3.10+) |
-| Python         | ≥ 3.10 (pre-installed on Ubuntu 22.04+) |
-| Docker         | ≥ 24 |
-| docker compose | v2+  |
+| Ubuntu         | 22.04+ (or any Linux with Python 3.10+) |
+| Python         | ≥ 3.10 |
 
 ### Option A — One-line installer (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ppswaroopa/ros2-playground/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ppswaroopa/ros2-dockergen/main/install.sh | bash
 ```
 
 The script will:
-1. Check for Python 3.10+ (already present on Ubuntu 22.04/24.04 — no install needed)
-2. Copy the tool to `/usr/local/lib/ros2-docker-gen/`
-3. Create a `/usr/local/bin/ros2-docker-gen` symlink
+1. Check for Python 3.10+
+2. Copy the tool to `/usr/local/lib/ros2-dockergen/`
+3. Create a `/usr/local/bin/ros2-dockergen` symlink
 
 ### Option B — Clone and install locally
 
 ```bash
-git clone https://github.com/ppswaroopa/ros2-playground.git
-cd ros2-playground
+git clone https://github.com/ppswaroopa/ros2-dockergen.git
+cd ros2-dockergen
 ./install.sh
 ```
 
 ### Option C — Run directly without installing
 
 ```bash
-git clone https://github.com/ppswaroopa/ros2-playground.git
-cd ros2-playground
-python3 bin/ros2-docker-gen
+git clone https://github.com/ppswaroopa/ros2-dockergen.git
+cd ros2-dockergen
+python3 bin/ros2-dockergen
 ```
 
 ---
@@ -61,9 +59,9 @@ python3 bin/ros2-docker-gen
 ## 🚀 Usage
 
 ```bash
-ros2-docker-gen          # start the interactive wizard
-ros2-docker-gen --help   # show help
-ros2-docker-gen --version
+ros2-dockergen           # start the interactive wizard
+ros2-dockergen --help    # show help
+ros2-dockergen --version # show version
 ```
 
 The wizard walks you through 8 steps:
@@ -104,19 +102,14 @@ Then writes three files:
 - `src/`: Core logic (Python for CLI, JavaScript for Web).
 - `data/`: `config.json` single source of truth.
 - `tests/`: Parity and validation suite.
+- `CI/`: helper scripts for CI/CD.
 - `.github/workflows/`: Automated CI pipeline.
-- `index.html`: Web-based interactive generator.
+- `index.html`: Webpage to generate Dockerfiles.
 ```
 
 ### How it works
 
-All package knowledge — which distros exist, which packages map to which apt names,
-which packages skip on certain distros, what environment variables to set — lives in
-`data/config.json`. Neither `core.py` nor `core.js` contain hardcoded rules; they
-only read the config and render output strings from it.
-
-This means the web UI and CLI share the same knowledge base. To add a new package
-or distro, you edit `config.json` once and both tools update automatically.
+All package knowledge lives in `data/config.json`. The `core.py` and `core.js` only read the config and render output strings from it. Web UI and CLI share the same knowledge base. To add a new package or distro, you edit `config.json` once and both tools update automatically.
 
 ### Running the parity tests
 
@@ -133,7 +126,7 @@ or either renderer.
 
 ## 🔗 Related
 
-- [ROS 2 Docker Generator Web UI](./index.html) — Interactive browser-based version.
+- [ROS 2 Docker Generator Web UI](https://ppswaroopa.github.io/ros2-dockergen/) — Interactive browser-based version.
 - [OSRF ROS Docker images](https://hub.docker.com/r/osrf/ros)
 - [ROS2 documentation](https://docs.ros.org)
 

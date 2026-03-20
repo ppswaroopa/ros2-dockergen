@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================
 # tests/run_tests.sh
-# Local test runner for ros2-docker-gen.
+# Local test runner for ros2-dockergen.
 # =============================================================
 
 set -e

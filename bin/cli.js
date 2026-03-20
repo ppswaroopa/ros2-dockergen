@@ -38,13 +38,13 @@ const C = {
 
 function printHelp() {
     console.log(`
-${C.bold('ros2-docker-gen')} v${VERSION}
+${C.bold('ros2-dockergen')} v${VERSION}
 Generate a Dockerfile, docker-compose.yml and README for a ROS2 project.
 
 ${C.bold('USAGE')}
-  ros2-docker-gen            Run the interactive wizard
-  ros2-docker-gen --help     Show this help message
-  ros2-docker-gen --version  Print the version number
+  ros2-dockergen            Run the interactive wizard
+  ros2-dockergen --help     Show this help message
+  ros2-dockergen --version  Print the version number
 
 ${C.bold('WIZARD STEPS')}
   1. ROS2 distro      — Jazzy (Ubuntu 24.04), Humble (22.04), Kilted
@@ -70,11 +70,11 @@ ${C.bold('OUTPUT')}
 
 ${C.bold('EXAMPLES')}
   # Basic run
-  ros2-docker-gen
+  ros2-dockergen
 
   # Install from a cloned repo and run
   ./install.sh
-  ros2-docker-gen
+  ros2-dockergen
 `);
 }
 
@@ -297,7 +297,7 @@ async function main() {
     console.log(C.dim('    • README.md            — quick-start guide'));
     console.log('');
     console.log(C.dim('  Type  q  at any prompt to cancel without writing files.'));
-    console.log(C.dim('  Run   ros2-docker-gen --help  for full usage guide.'));
+    console.log(C.dim('  Run   ros2-dockergen --help  for full usage guide.'));
 
     step('ROS2 Distribution');
     const distro = await selectOne(

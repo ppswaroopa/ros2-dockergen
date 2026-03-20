@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-ros2-docker-gen — Interactive CLI wizard.
+ros2-dockergen — Interactive CLI wizard.
 Generates Dockerfile, docker-compose.yml and README.md for ROS2 projects.
 
 Usage:
-  ros2-docker-gen              Run the interactive wizard
-  ros2-docker-gen --help       Show help
-  ros2-docker-gen --version    Print the version
+  ros2-dockergen              Run the interactive wizard
+  ros2-dockergen --help       Show help
+  ros2-dockergen --version    Print the version
 """
 
 import sys
@@ -18,7 +18,7 @@ import readline as _rl  # noqa: F401  — enables arrow keys / history in input(
 from pathlib import Path
 
 # ── Locate data/config.json relative to this script ──────────────────────────
-# Installed layout:  /usr/local/lib/ros2-docker-gen/{bin/ros2-docker-gen,
+# Installed layout:  /usr/local/lib/ros2-dockergen/{bin/ros2-dockergen,
 #                                                     src/core.py,
 #                                                     data/config.json}
 # Dev / cloned layout: same relative structure from repo root.
@@ -124,7 +124,7 @@ def _render_panel(current_step: int) -> list[str]:
 
     # Banner
     rows.append(cyan("╔" + "═" * (W - 2) + "╗"))
-    title = f"  🤖  ros2-docker-gen  v{_VERSION}"
+    title = f"  🤖  ros2-dockergen  v{_VERSION}"
     rows.append(cyan("║") + bold(_pad(title, W - 2)) + cyan("║"))
     rows.append(cyan("╚" + "═" * (W - 2) + "╝"))
     rows.append("")
@@ -556,7 +556,7 @@ def _wizard() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="ros2-docker-gen",
+        prog="ros2-dockergen",
         description="Generate a Dockerfile, docker-compose.yml and README for a ROS2 project.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""

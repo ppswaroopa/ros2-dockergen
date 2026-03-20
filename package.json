@@ -1,10 +1,10 @@
 {
-  "name": "ros2-docker-gen",
+  "name": "ros2-dockergen",
   "version": "1.0.0",
   "description": "CLI tool to generate ROS2 Dockerfiles and docker-compose files interactively",
   "type": "module",
   "bin": {
-    "ros2-docker-gen": "./bin/cli.js"
+    "ros2-dockergen": "./bin/cli.js"
   },
   "scripts": {
     "start": "node bin/cli.js"
@@ -13,6 +13,11 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": ["ros2", "docker", "robotics", "cli", "generator"],
+  "keywords": [
+    "ros2",
+    "docker",
+    "robotics",
+    "cli"
+  ],
   "license": "MIT"
 }

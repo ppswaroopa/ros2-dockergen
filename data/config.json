@@ -1,5 +1,5 @@
 {
-  "_comment": "ros2-docker-gen shared configuration — consumed by both core.js (web) and core.py (CLI). Do not encode logic in either consumer; encode it here as rules.",
+  "_comment": "ros2-dockergen shared configuration — consumed by both core.js (web) and core.py (CLI). Do not encode logic in either consumer; encode it here as rules.",
 
   "version": "1.0.0",
 

@@ -5,12 +5,12 @@
 # Usage (from inside the cloned repo):
 #   ./install.sh
 #
-# Usage (remote, once the repo is public):
-#   curl -fsSL https://raw.githubusercontent.com/ppswaroopa/ros2-playground/main/install.sh | bash
+# Usage (remote):
+#   curl -fsSL https://raw.githubusercontent.com/ppswaroopa/ros2-dockergen/main/install.sh | bash
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-PACKAGE_NAME="ros2-docker-gen"
+PACKAGE_NAME="ros2-dockergen"
 MIN_PYTHON_MINOR=10
 INSTALL_DIR="/usr/local/lib/${PACKAGE_NAME}"
 BIN_LINK="/usr/local/bin/${PACKAGE_NAME}"
@@ -49,25 +49,19 @@ info "Checking Python 3..."
 
 PYTHON=""
 for candidate in python3 python3.13 python3.12 python3.11 python3.10; do
-    if command -v "${candidate}" &>/dev/null; then
-        minor=$("${candidate}" -c "import sys; print(sys.version_info.minor)")
-        major=$("${candidate}" -c "import sys; print(sys.version_info.major)")
+    path=$(command -v "${candidate}" 2>/dev/null)
+    if [[ -n "${path}" ]]; then
+        minor=$("${path}" -c "import sys; print(sys.version_info.minor)")
+        major=$("${path}" -c "import sys; print(sys.version_info.major)")
         if [[ "${major}" -eq 3 && "${minor}" -ge "${MIN_PYTHON_MINOR}" ]]; then
-            PYTHON="${candidate}"
+            PYTHON="${path}"
             break
         fi
     fi
 done
 
 if [[ -z "${PYTHON}" ]]; then
-    info "Python 3.${MIN_PYTHON_MINOR}+ not found — installing via apt..."
-    if command -v apt-get &>/dev/null; then
-        sudo apt-get update -qq
-        sudo apt-get install -y python3
-        PYTHON="python3"
-    else
-        die "Please install Python 3.${MIN_PYTHON_MINOR}+ and re-run."
-    fi
+    die "Python 3.${MIN_PYTHON_MINOR}+ not found. Please install it and re-run."
 fi
 
 success "$("${PYTHON}" --version) — OK"
@@ -76,11 +70,17 @@ success "$("${PYTHON}" --version) — OK"
 do_install() {
     local src="$1"
     sudo mkdir -p "${INSTALL_DIR}"
+    sudo rm -rf "${INSTALL_DIR:?}"/*
     sudo cp -r "${src}/src"  "${INSTALL_DIR}/"
     sudo cp -r "${src}/data" "${INSTALL_DIR}/"
     sudo cp -r "${src}/bin"  "${INSTALL_DIR}/"
+    
+    # Ensure absolute path for shebang
+    local py_path
+    py_path=$(command -v "${PYTHON}")
+    
     sudo chmod +x "${INSTALL_DIR}/bin/${PACKAGE_NAME}"
-    sudo sed -i "1s|.*|#!${PYTHON}|" "${INSTALL_DIR}/bin/${PACKAGE_NAME}"
+    sudo sed -i "1s|.*|#!${py_path}|" "${INSTALL_DIR}/bin/${PACKAGE_NAME}"
     sudo ln -sf "${INSTALL_DIR}/bin/${PACKAGE_NAME}" "${BIN_LINK}"
 }
 
@@ -95,7 +95,7 @@ else
             || die "git is required for remote install."
     }
     CLONE_DIR="$(mktemp -d)"
-    git clone --depth 1 "https://github.com/ppswaroopa/ros2-playground.git" "${CLONE_DIR}"
+    git clone --depth 1 "https://github.com/ppswaroopa/ros2-dockergen.git" "${CLONE_DIR}"
     do_install "${CLONE_DIR}"
     rm -rf "${CLONE_DIR}"
     success "Installed to ${INSTALL_DIR}"
