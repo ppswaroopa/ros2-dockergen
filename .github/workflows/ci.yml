@@ -58,24 +58,27 @@ jobs:
           base: ${{ github.base_ref || 'main' }}
           filters: |
             generator:
-              - 'ros2-docker-gen/CI/generate.js'
-              - 'ros2-docker-gen/CI/validate.sh'
+              - 'CI/generate.js'
+              - 'CI/validate.sh'
               - '.github/workflows/ci.yml'
               - '.github/workflows/_test-base.yml'
             user_setup:
-              - 'ros2-docker-gen/CI/generate.js'
-              - 'ros2-docker-gen/CI/validate.sh'
+              - 'CI/generate.js'
+              - 'CI/validate.sh'
               - '.github/workflows/_test-user-setup.yml'
             gui:
-              - 'ros2-docker-gen/CI/generate.js'
-              - 'ros2-docker-gen/CI/validate.sh'
+              - 'CI/generate.js'
+              - 'CI/validate.sh'
               - '.github/workflows/_test-gui.yml'
             nvidia:
-              - 'ros2-docker-gen/CI/generate.js'
-              - 'ros2-docker-gen/CI/validate.sh'
+              - 'CI/generate.js'
+              - 'CI/validate.sh'
               - '.github/workflows/_test-nvidia.yml'
             any:
-              - 'ros2-docker-gen/**'
+              - 'src/**'
+              - 'data/**'
+              - 'bin/**'
+              - 'CI/**'
               - '.github/workflows/**'
               - 'index.html'
               - 'README.md'
@@ -237,7 +240,7 @@ jobs:
           node-version: '20'
       - name: Generate Dockerfile (The Everything Config)
         run: |
-          node ros2-docker-gen/CI/generate.js \
+          node CI/generate.js \
             --distro   ${{ matrix.distro }} \
             --variant  desktop-full \
             --packages "nav2,slam_toolbox,cartographer,gazebo,rviz2,turtlebot3,moveit2,ros2_control,pcl,cv_bridge,tf2,cyclone_dds" \
@@ -260,7 +263,7 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO=${{ matrix.distro }} \
             -e CI_TEST_SUITE=build-tools \
-            -v "${{ github.workspace }}/ros2-docker-gen/CI/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-kitchen-sink:ci \
             bash /validate.sh
 

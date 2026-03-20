@@ -6,7 +6,7 @@
 #   ./install.sh
 #
 # Usage (remote, once the repo is public):
-#   curl -fsSL https://raw.githubusercontent.com/YOUR_USER/ros2-docker-gen/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ppswaroopa/ros2-playground/main/install.sh | bash
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -95,7 +95,7 @@ else
             || die "git is required for remote install."
     }
     CLONE_DIR="$(mktemp -d)"
-    git clone --depth 1 "https://github.com/YOUR_USER/${PACKAGE_NAME}.git" "${CLONE_DIR}"
+    git clone --depth 1 "https://github.com/ppswaroopa/ros2-playground.git" "${CLONE_DIR}"
     do_install "${CLONE_DIR}"
     rm -rf "${CLONE_DIR}"
     success "Installed to ${INSTALL_DIR}"

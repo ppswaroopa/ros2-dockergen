@@ -32,7 +32,7 @@
 ### Option A — One-line installer (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ppswaroopa/ros2-docker-gen/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ppswaroopa/ros2-playground/main/install.sh | bash
 ```
 
 The script will:
@@ -43,16 +43,16 @@ The script will:
 ### Option B — Clone and install locally
 
 ```bash
-git clone https://github.com/ppswaroopa/ros2-docker-gen.git
-cd ros2-docker-gen
+git clone https://github.com/ppswaroopa/ros2-playground.git
+cd ros2-playground
 ./install.sh
 ```
 
 ### Option C — Run directly without installing
 
 ```bash
-git clone https://github.com/ppswaroopa/ros2-docker-gen.git
-cd ros2-docker-gen
+git clone https://github.com/ppswaroopa/ros2-playground.git
+cd ros2-playground
 python3 bin/ros2-docker-gen
 ```
 
@@ -100,18 +100,12 @@ Then writes three files:
 ## 📁 Project structure
 
 ```
-ros2-docker-gen/
-├── bin/
-│   └── ros2-docker-gen     ← executable entry point (Python)
-├── src/
-│   ├── core.py             ← Python renderer — used by CLI
-│   └── core.js             ← JavaScript renderer — used by web UI
-├── data/
-│   └── config.json         ← single source of truth (all rules and package data)
-├── tests/
-│   └── test_parity.py      ← ensures core.py and core.js produce identical output
-├── install.sh
-└── README.md
+- `bin/`: CLI entry points and scripts.
+- `src/`: Core logic (Python for CLI, JavaScript for Web).
+- `data/`: `config.json` single source of truth.
+- `tests/`: Parity and validation suite.
+- `.github/workflows/`: Automated CI pipeline.
+- `index.html`: Web-based interactive generator.
 ```
 
 ### How it works
@@ -139,7 +133,7 @@ or either renderer.
 
 ## 🔗 Related
 
-- [ROS2 Docker Generator Web UI](https://your-site.com) — same config.json, browser-based
+- [ROS 2 Docker Generator Web UI](./index.html) — Interactive browser-based version.
 - [OSRF ROS Docker images](https://hub.docker.com/r/osrf/ros)
 - [ROS2 documentation](https://docs.ros.org)
 
