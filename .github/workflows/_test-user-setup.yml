@@ -40,7 +40,7 @@ jobs:
 
       - name: Generate Dockerfile (custom user, sudo enabled)
         run: |
-          node ros2-docker-gen/CI/generate.js \
+          node CI/generate.js \
             --distro   humble \
             --variant  ros-base \
             --tools    "bashrc,locale,sudo" \
@@ -102,7 +102,7 @@ jobs:
 
       - name: Generate Dockerfile (root user)
         run: |
-          node ros2-docker-gen/CI/generate.js \
+          node CI/generate.js \
             --distro   humble \
             --variant  ros-base \
             --tools    "bashrc,locale" \

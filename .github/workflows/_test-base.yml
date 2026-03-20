@@ -39,7 +39,7 @@ jobs:
 
       - name: Generate Dockerfile
         run: |
-          node ros2-docker-gen/CI/generate.js \
+          node CI/generate.js \
             --distro   "${{ inputs.distro }}" \
             --variant  "${{ inputs.variant }}" \
             --tools    "bashrc,locale,sudo" \

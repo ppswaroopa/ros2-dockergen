@@ -43,7 +43,7 @@ jobs:
 
       - name: Generate Dockerfile (all build tools enabled)
         run: |
-          node ros2-docker-gen/CI/generate.js \
+          node CI/generate.js \
             --distro   "${{ inputs.distro }}" \
             --variant  "ros-base" \
             --tools    "colcon,rosdep,python3,git,cmake,vcstool,bashrc,locale,sudo" \

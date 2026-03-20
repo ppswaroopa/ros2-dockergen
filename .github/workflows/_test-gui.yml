@@ -56,7 +56,7 @@ jobs:
 
       - name: Generate Dockerfile (desktop + RViz2 + Gazebo)
         run: |
-          node ros2-docker-gen/CI/generate.js \
+          node CI/generate.js \
             --distro    "${{ inputs.distro }}" \
             --variant   "desktop" \
             --packages  "rviz2,gazebo" \
