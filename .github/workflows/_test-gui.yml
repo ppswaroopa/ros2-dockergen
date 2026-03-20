@@ -73,12 +73,6 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-gui-${{ inputs.distro }}-${{ hashFiles('build-context/Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-gui-${{ inputs.distro }}-
 
       - name: Build image
         uses: docker/build-push-action@v5
@@ -87,13 +81,9 @@ jobs:
           push: false
           load: true
           tags: ros2-test-gui-${{ inputs.distro }}:ci
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to:   type=local,dest=/tmp/.buildx-cache-new,mode=max
+          cache-from: type=gha,scope=gui-${{ inputs.distro }}
+          cache-to: type=gha,mode=min,scope=gui-${{ inputs.distro }}
 
-      - name: Rotate cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Validate GUI packages
         run: |

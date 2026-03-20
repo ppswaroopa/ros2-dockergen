@@ -258,6 +258,8 @@ jobs:
           push: false
           load: true
           tags: ros2-kitchen-sink:ci
+          cache-from: type=gha,scope=kitchen-sink-${{ matrix.distro }}
+          cache-to: type=gha,mode=max,scope=kitchen-sink-${{ matrix.distro }}
       - name: Validate
         run: |
           docker run --rm \

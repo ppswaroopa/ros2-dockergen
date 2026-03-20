@@ -62,12 +62,6 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       # NVIDIA base image is large (~6GB) — cache is especially important here
-      - uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-nvidia-${{ inputs.distro }}-${{ hashFiles('build-context/Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-nvidia-${{ inputs.distro }}-
 
       - name: Build image
         uses: docker/build-push-action@v5
@@ -76,13 +70,9 @@ jobs:
           push: false
           load: true
           tags: ros2-test-nvidia-${{ inputs.distro }}:ci
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to:   type=local,dest=/tmp/.buildx-cache-new,mode=max
+          cache-from: type=gha,scope=nvidia-${{ inputs.distro }}
+          cache-to: type=gha,mode=min,scope=nvidia-${{ inputs.distro }}
 
-      - name: Rotate cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Validate NVIDIA build
         run: |
