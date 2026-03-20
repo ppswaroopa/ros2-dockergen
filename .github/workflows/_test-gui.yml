@@ -102,6 +102,6 @@ jobs:
             -e DISPLAY=":99" \
             -e CI_TEST_SUITE=gui \
             -v /tmp/.X11-unix:/tmp/.X11-unix \
-            -v "${{ github.workspace }}/ros2-docker-gen/CI/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-test-gui-${{ inputs.distro }}:ci \
             bash /validate.sh

@@ -89,6 +89,6 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO="${{ inputs.distro }}" \
             -e CI_TEST_SUITE=nvidia \
-            -v "${{ github.workspace }}/ros2-docker-gen/CI/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-test-nvidia-${{ inputs.distro }}:ci \
             bash /validate.sh

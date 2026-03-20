@@ -369,7 +369,7 @@ export function getToolChoices() {
 // ── Browser Compatibility Layer ────────────────────────────────────────
 
 if (typeof window !== 'undefined') {
-    window.ROS2_GENERATOR_CORE = {
+    window.ROS2_DOCKER_GEN_CORE = {
         init, getBaseImage, buildDockerfile, buildCompose, buildReadme,
         getDistros, getVariants, getRosPackageChoices, getToolChoices
     };

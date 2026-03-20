@@ -86,6 +86,6 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO="${{ inputs.distro }}" \
             -e CI_TEST_SUITE=build-tools \
-            -v "${{ github.workspace }}/ros2-docker-gen/CI/validate.sh:/validate.sh:ro" \
+            -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-test-tools-${{ inputs.distro }}:ci \
             bash /validate.sh

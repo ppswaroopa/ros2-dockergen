@@ -2202,12 +2202,59 @@
         // ============================================================
         // INIT
         // ============================================================
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             // Set step-dot num text (for non-done steps)
             document.querySelectorAll('.step-dot .num').forEach((el, i) => {
                 if (!el.textContent.trim()) el.textContent = i + 1;
             });
-            generateFiles();
+
+            const configUrl = 'data/config.json';
+            console.log('Fetching configuration from:', configUrl);
+
+            try {
+                // 1. Fetch config
+                const response = await fetch(configUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to reach ${configUrl}`);
+                const config = await response.json();
+                console.log('Config loaded!');
+
+                // 2. Wait for Core logic (ensure module has executed and exported)
+                let core = window.ROS2_DOCKER_GEN_CORE;
+                if (!core) {
+                    console.warn('Core module not ready, waiting...');
+                    for (let i = 0; i < 10; i++) {
+                        await new Promise(r => setTimeout(r, 50));
+                        core = window.ROS2_DOCKER_GEN_CORE;
+                        if (core) break;
+                    }
+                }
+
+                if (!core) throw new Error(`Core generator (src/core.js) is not available. This usually happens if the browser blocks local module imports via file:// protocol.`);
+
+                // 3. Initialize and generate
+                core.init(config);
+                console.log('Core initialized! Building initial files...');
+                generateFiles();
+
+            } catch (err) {
+                console.error('Initialization failed:', err);
+                const dfEl = document.getElementById('dockerfile-out');
+                if (dfEl) {
+                    dfEl.innerHTML = `<div style="padding: 24px; border: 1px solid var(--orange); background: rgba(255,165,0,0.1); border-radius: 12px; font-family: 'JetBrains Mono', monospace;">
+                        <h3 style="color:var(--orange); margin-top:0;">⚠️ Initialization Error</h3>
+                        <p style="color:var(--text); font-size: 14px;">The generator failed to load required components.</p>
+                        <ul style="color:var(--text-dim); font-size: 13px; line-height: 1.6; margin: 16px 0;">
+                            <li><strong>Error:</strong> <code>${err.message}</code></li>
+                            <li><strong>Source:</strong> <code>${configUrl}</code></li>
+                        </ul>
+                        <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; font-size: 12px; color: var(--text-dim);">
+                            <strong>Fix:</strong> If you are opening this file directly (<code>file://</code>), browsers often block local data loads.<br><br>
+                            Run a local server instead:<br>
+                            <code style="color:var(--cyan)">python3 -m http.server</code> or <code style="color:var(--cyan)">npx serve .</code>
+                        </div>
+                    </div>`;
+                }
+            }
         });
     </script>
 </body>
