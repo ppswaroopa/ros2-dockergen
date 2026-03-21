@@ -251,8 +251,8 @@ export function buildCompose(config) {
     ln(`      dockerfile: Dockerfile`);
     if (!isRoot) { ln(`      args:`); ln(`        UID: \${UID:-1000}`); ln(`        GID: \${GID:-1000}`); }
     ln(`    image: ros2-${distro}-${containerName}:latest`);
-    ln(`    container_name: {containerName}`);
-    ln(`    hostname: {containerName}`);
+    ln(`    container_name: ${containerName}`);
+    ln(`    hostname: ${containerName}`);
     ln(`    stdin_open: true`);
     ln(`    tty: true`);
     ln(`    restart: unless-stopped`);
@@ -289,7 +289,7 @@ export function buildCompose(config) {
     }
     if (ports.length) { ln(`    ports:`); ports.forEach(p => ln(`      - "${p}"`)); }
 
-    return L.join('\n').replace(/\{containerName\}/g, containerName);
+    return L.join('\n');
 }
 
 /** Build README.md content */

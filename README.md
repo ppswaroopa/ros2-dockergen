@@ -132,4 +132,4 @@ or either renderer.
 
 ## License
 
-MIT
+Released under the [MIT License](LICENSE).

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# ros2-docker-gen — Installer
+# ros2-dockergen — Installer
 #
 # Usage (from inside the cloned repo):
 #   ./install.sh
@@ -12,8 +12,6 @@ set -euo pipefail
 
 PACKAGE_NAME="ros2-dockergen"
 MIN_PYTHON_MINOR=10
-INSTALL_DIR="/usr/local/lib/${PACKAGE_NAME}"
-BIN_LINK="/usr/local/bin/${PACKAGE_NAME}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'
 BOLD='\033[1m'; RESET='\033[0m'

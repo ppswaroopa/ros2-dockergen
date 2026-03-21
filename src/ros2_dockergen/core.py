@@ -93,15 +93,12 @@ class GeneratorCore:
             ln("RUN apt-get update && apt-get install -y \\")
             for p in self._cfg["cuda_ros_install_apt"]:
                 ln(f"    {p} \\")
-            ln("    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \\")
+            ln(f"    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \\")
             ln("    -o /usr/share/keyrings/ros-archive-keyring.gpg && \\")
             ln("    echo \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \\")
             ln("    http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main\" \\")
             ln("    > /etc/apt/sources.list.d/ros2.list && \\")
-            ln("    apt-get update && apt-get install -y ros-{}-{}-{} && \\".format(distro, variant, "dummy").replace("-dummy", "")) # JS logic was ros-${distro}-${variant}
-            # wait, JS core.js line 106: apt-get install -y ros-${distro}-${variant} && \\
-            # I should follow JS exactly
-            L[-1] = f"    apt-get update && apt-get install -y ros-{distro}-{variant} && \\"
+            ln(f"    apt-get update && apt-get install -y ros-{distro}-{variant} && \\")
             ln("    rm -rf /var/lib/apt/lists/*")
             gap()
             

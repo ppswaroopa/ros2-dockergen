@@ -20,6 +20,8 @@ ros2-humble-ssh/
 ros2-jazzy-dev/
 ros2-docker-gen/tests/_runner.cjs
 ros2-docker-gen/tests/_runner.js
+tests/_runner.cjs
+tests/_runner.js
 
 # Git / IDE and OS
 .vscode/

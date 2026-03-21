@@ -26,6 +26,7 @@ dependencies = []
 [project.urls]
 Homepage = "https://github.com/ppswaroopa/ros2-dockergen"
 Repository = "https://github.com/ppswaroopa/ros2-dockergen"
+"Bug Tracker" = "https://github.com/ppswaroopa/ros2-dockergen/issues"
 
 [project.scripts]
 ros2-dockergen = "ros2_dockergen.cli:main"
