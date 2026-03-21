@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const R = path.join(__dirname, '..');
-const config = JSON.parse(fs.readFileSync(path.join(R, 'data', 'config.json'), 'utf8'));
+const config = JSON.parse(fs.readFileSync(path.join(R, 'src', 'ros2_dockergen', 'data', 'config.json'), 'utf8'));
 CORE.init(config);
 const raw = JSON.parse(process.argv[2]);
 const cfg = {

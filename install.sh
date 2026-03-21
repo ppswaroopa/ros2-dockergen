@@ -29,17 +29,10 @@ echo -e "${BOLD}${CYAN}╚══════════════════
 echo ""
 
 # ── 1. Locate the repo root ───────────────────────────────────────────────────
-SCRIPT_DIR=""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_INSTALL=false
 
-if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-fi
-
-if [[ -n "${SCRIPT_DIR}"                              \
-   && -f "${SCRIPT_DIR}/bin/${PACKAGE_NAME}"          \
-   && -f "${SCRIPT_DIR}/src/core.py"                  \
-   && -f "${SCRIPT_DIR}/data/config.json" ]]; then
+if [[ -f "${SCRIPT_DIR}/pyproject.toml" && -d "${SCRIPT_DIR}/src/ros2_dockergen" ]]; then
     LOCAL_INSTALL=true
     info "Detected local repo at: ${SCRIPT_DIR}"
 fi
@@ -69,25 +62,14 @@ success "$("${PYTHON}" --version) — OK"
 # ── 3. Install ────────────────────────────────────────────────────────────────
 do_install() {
     local src="$1"
-    sudo mkdir -p "${INSTALL_DIR}"
-    sudo rm -rf "${INSTALL_DIR:?}"/*
-    sudo cp -r "${src}/src"  "${INSTALL_DIR}/"
-    sudo cp -r "${src}/data" "${INSTALL_DIR}/"
-    sudo cp -r "${src}/bin"  "${INSTALL_DIR}/"
-    
-    # Ensure absolute path for shebang
-    local py_path
-    py_path=$(command -v "${PYTHON}")
-    
-    sudo chmod +x "${INSTALL_DIR}/bin/${PACKAGE_NAME}"
-    sudo sed -i "1s|.*|#!${py_path}|" "${INSTALL_DIR}/bin/${PACKAGE_NAME}"
-    sudo ln -sf "${INSTALL_DIR}/bin/${PACKAGE_NAME}" "${BIN_LINK}"
+    info "Installing package via pip..."
+    sudo "${PYTHON}" -m pip install "${src}"
 }
 
 if [[ "${LOCAL_INSTALL}" = true ]]; then
     info "Installing from local repo..."
     do_install "${SCRIPT_DIR}"
-    success "Installed to ${INSTALL_DIR}"
+    success "Installed successfully via pip."
 else
     info "Remote install — cloning repository..."
     command -v git &>/dev/null || {
@@ -98,7 +80,7 @@ else
     git clone --depth 1 "https://github.com/ppswaroopa/ros2-dockergen.git" "${CLONE_DIR}"
     do_install "${CLONE_DIR}"
     rm -rf "${CLONE_DIR}"
-    success "Installed to ${INSTALL_DIR}"
+    success "Installed successfully via pip."
 fi
 
 # ── 4. Verify ─────────────────────────────────────────────────────────────────
@@ -110,7 +92,7 @@ if command -v "${PACKAGE_NAME}" &>/dev/null; then
     echo -e "  Run ${BOLD}${CYAN}${PACKAGE_NAME} --help${RESET} for usage details."
     echo ""
 else
-    warn "Command not in PATH. Add /usr/local/bin if needed:"
-    echo "    echo 'export PATH=\"/usr/local/bin:\$PATH\"' >> ~/.bashrc && source ~/.bashrc"
+    warn "Package installed but '${PACKAGE_NAME}' command not found in PATH."
+    echo "  You may need to add ~/.local/bin to your PATH or use 'python3 -m ros2_dockergen'."
     echo ""
 fi

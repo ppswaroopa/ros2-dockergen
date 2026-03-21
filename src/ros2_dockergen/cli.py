@@ -2,11 +2,6 @@
 """
 ros2-dockergen — Interactive CLI wizard.
 Generates Dockerfile, docker-compose.yml and README.md for ROS2 projects.
-
-Usage:
-  ros2-dockergen              Run the interactive wizard
-  ros2-dockergen --help       Show help
-  ros2-dockergen --version    Print the version
 """
 
 import sys
@@ -14,31 +9,29 @@ import os
 import signal
 import argparse
 import re
-import readline as _rl  # noqa: F401  — enables arrow keys / history in input()
+import readline as _rl  # noqa: F401
+import json
 from pathlib import Path
+from importlib import resources
 
-# ── Locate data/config.json relative to this script ──────────────────────────
-# Installed layout:  /usr/local/lib/ros2-dockergen/{bin/ros2-dockergen,
-#                                                     src/core.py,
-#                                                     data/config.json}
-# Dev / cloned layout: same relative structure from repo root.
+from .core import GeneratorCore
 
-_SCRIPT = Path(__file__).resolve()
-_ROOT   = _SCRIPT.parent.parent          # bin/../  → repo / install root
-_CONFIG = _ROOT / "data" / "config.json"
-_SRC    = _ROOT / "src"
+# -- Resource Loading ---------------------------------------------------------
 
-if not _CONFIG.exists():
-    print(f"error: config.json not found at {_CONFIG}", file=sys.stderr)
-    sys.exit(1)
+def load_config():
+    try:
+        traversable = resources.files('ros2_dockergen.data').joinpath('config.json')
+        with traversable.open('r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"error: could not load config.json: {e}", file=sys.stderr)
+        sys.exit(1)
 
-sys.path.insert(0, str(_SRC))
-from core import GeneratorCore  # noqa: E402
+_CONFIG_DATA = load_config()
+_CORE        = GeneratorCore(_CONFIG_DATA)
+_VERSION     = _CONFIG_DATA["version"]
 
-_CORE    = GeneratorCore.from_file(_CONFIG)
-_VERSION = _CORE._cfg["version"]
-
-# ── ANSI colour helpers ───────────────────────────────────────────────────────
+# -- ANSI colour helpers -------------------------------------------------------
 
 _IS_TTY = sys.stdout.isatty()
 
@@ -55,7 +48,7 @@ def red(s):       return _c("31",   s)
 def gray(s):      return _c("90",   s)
 def underline(s): return _c("4",    s)
 
-# ── Cursor helpers (TTY only) ─────────────────────────────────────────────────
+# -- Cursor helpers (TTY only) -------------------------------------------------
 
 def _write(s: str) -> None:
     sys.stdout.write(s)
@@ -67,7 +60,7 @@ def _up(n: int) -> None:
 def _clear_down() -> None:
     if _IS_TTY: _write("\033[J")
 
-# ── Quit / Ctrl-C ─────────────────────────────────────────────────────────────
+# -- Quit / Ctrl-C -------------------------------------------------------------
 
 class _Quit(Exception):
     pass
@@ -78,19 +71,19 @@ def _handle_sigint(sig, frame):
 signal.signal(signal.SIGINT, _handle_sigint)
 
 def _quit():
-    _write("\033[?25h")        # show cursor in case it was hidden
+    _write("\033[?25h")
     print(f"\n{yellow('  Wizard cancelled — no files were written.')}\n")
     sys.exit(0)
 
-# ── Panel state ───────────────────────────────────────────────────────────────
+# -- Panel state ---------------------------------------------------------------
 
-W = 60   # panel width
+W = 60
 
 _selections = {
     "distro":    None,
     "variant":   None,
-    "packages":  None,   # list[str] or None
-    "tools":     None,   # list[str] or None
+    "packages":  None,
+    "tools":     None,
     "user":      None,
     "workspace": None,
     "container": None,
@@ -102,10 +95,9 @@ _STEP_LABELS = [
     "User", "Workspace", "Container", "Output dir",
 ]
 
-_panel_lines = 0   # lines occupied by the last drawn panel
+_panel_lines = 0
 
 def _vis_len(s: str) -> int:
-    """Length of s with ANSI escape sequences stripped."""
     return len(re.sub(r"\033\[[0-9;]*m", "", s))
 
 def _pad(s: str, width: int) -> str:
@@ -122,14 +114,12 @@ def _render_panel(current_step: int) -> list[str]:
     SEP = cyan("─" * W)
     rows: list[str] = []
 
-    # Banner
     rows.append(cyan("╔" + "═" * (W - 2) + "╗"))
     title = f"  🤖  ros2-dockergen  v{_VERSION}"
     rows.append(cyan("║") + bold(_pad(title, W - 2)) + cyan("║"))
     rows.append(cyan("╚" + "═" * (W - 2) + "╝"))
     rows.append("")
 
-    # Completed selections
     labels = ["Distro", "Variant", "Packages", "Tools",
               "User", "Workspace", "Container", "Output"]
     values = [
@@ -154,7 +144,6 @@ def _render_panel(current_step: int) -> list[str]:
     rows.append("")
     rows.append(SEP)
 
-    # Step indicator
     step_str   = cyan(f"  [{current_step}/{len(_STEP_LABELS)}]")
     step_name  = bold(_STEP_LABELS[current_step - 1])
     pending    = _STEP_LABELS[current_step:]
@@ -182,11 +171,7 @@ def _erase_question(line_count: int) -> None:
         _up(line_count)
         _clear_down()
 
-# ── Low-level prompt ──────────────────────────────────────────────────────────
-
 def _ask(prompt: str, default: str = "") -> str:
-    """Print prompt, read one line. Returns stripped answer or default.
-    Raises _Quit on 'q' or EOF."""
     hint    = dim(f" [{default}]") if default else ""
     qhint   = gray("  (q to quit)")
     _write(f"{prompt}{hint}{qhint} › ")
@@ -194,18 +179,14 @@ def _ask(prompt: str, default: str = "") -> str:
         line = sys.stdin.readline()
     except KeyboardInterrupt:
         raise _Quit()
-    if not line:                # EOF (Ctrl-D)
+    if not line:
         raise _Quit()
     val = line.strip()
     if val.lower() == "q":
         raise _Quit()
     return val or default
 
-# ── Prompt widgets ────────────────────────────────────────────────────────────
-
 def _select_one(question: str, hint: str, choices: list[dict]) -> str:
-    """Numbered single-select. Erases itself after a valid answer."""
-
     def _print(error: str | None) -> int:
         lines = []
         lines.append(bold(question))
@@ -235,9 +216,7 @@ def _select_one(question: str, hint: str, choices: list[dict]) -> str:
         _erase_question(q_lines + 1)
         q_lines = _print(f"Please enter a number between 1 and {len(choices)}")
 
-
 def _select_many(question: str, hint: str, choices: list[dict]) -> list[str]:
-    """Numbered multi-select. Erases itself after a valid answer."""
     defaults = [str(i + 1) for i, c in enumerate(choices) if c.get("checked")]
 
     def _print(error: str | None) -> int:
@@ -289,11 +268,8 @@ def _select_many(question: str, hint: str, choices: list[dict]) -> list[str]:
         _erase_question(q_lines + 1)
         q_lines = _print(f"Use comma-separated numbers 1–{len(choices)}, 'a', or 'n'")
 
-
 def _input_line(label: str, hint: str, default: str,
                 validate=None) -> str:
-    """Free-text input with optional validator. Erases itself."""
-
     def _print(error: str | None) -> int:
         lines = []
         lines.append(bold(label))
@@ -323,7 +299,6 @@ def _input_line(label: str, hint: str, default: str,
         _erase_question(q_lines + 1)
         return val
 
-
 def _confirm(question: str, default: bool = False) -> bool:
     hint = "Y/n" if default else "y/N"
     try:
@@ -332,7 +307,7 @@ def _confirm(question: str, default: bool = False) -> bool:
         _quit()
     return raw.lower().startswith("y")
 
-# ── Build choice lists from config ────────────────────────────────────────────
+# -- Build choice lists from _CORE ---------------------------------------------
 
 def _distro_choices() -> list[dict]:
     result = []
@@ -342,7 +317,6 @@ def _distro_choices() -> list[dict]:
         result.append({"value": d["value"], "name": label})
     return result
 
-
 def _variant_choices() -> list[dict]:
     return [
         {"value": v["value"],
@@ -350,14 +324,12 @@ def _variant_choices() -> list[dict]:
         for v in _CORE.get_variants()
     ]
 
-
 def _package_choices() -> list[dict]:
     return [
         {"value": p["value"],
          "name": f"{p['label'].ljust(16)} {p['description']}"}
         for p in _CORE.get_ros_package_choices()
     ]
-
 
 def _tool_choices() -> list[dict]:
     return [
@@ -367,7 +339,7 @@ def _tool_choices() -> list[dict]:
         for t in _CORE.get_tool_choices()
     ]
 
-# ── Final summary ─────────────────────────────────────────────────────────────
+# -- Final summary -------------------------------------------------------------
 
 def _print_done(cfg: dict, abs_out: Path) -> None:
     SEP      = cyan("─" * W)
@@ -405,13 +377,11 @@ def _print_done(cfg: dict, abs_out: Path) -> None:
     print(f"     {cyan(f'docker exec -it {cname} bash')}")
     print()
 
-# ── Main wizard ───────────────────────────────────────────────────────────────
+# -- Main wizard ---------------------------------------------------------------
 
 def _wizard() -> None:
-    # ── Initial panel ────────────────────────────────────────────────────────
     _draw_panel(1)
 
-    # ── Step 1: Distro ───────────────────────────────────────────────────────
     distro = _select_one(
         "Which ROS2 distribution?",
         "Determines the base image and available package versions.",
@@ -420,7 +390,6 @@ def _wizard() -> None:
     _selections["distro"] = distro
     _draw_panel(2)
 
-    # ── Step 2: Variant ──────────────────────────────────────────────────────
     variant = _select_one(
         "Which base image variant?",
         "Larger variants include more pre-installed tools but produce bigger images.",
@@ -429,7 +398,6 @@ def _wizard() -> None:
     _selections["variant"] = variant
     _draw_panel(3)
 
-    # ── Step 3: ROS2 packages ────────────────────────────────────────────────
     sel_pkgs = _select_many(
         "Which ROS2 packages to install?",
         "Installed via apt. Select none to start with a clean base.",
@@ -438,7 +406,6 @@ def _wizard() -> None:
     _selections["packages"] = sel_pkgs
     _draw_panel(4)
 
-    # ── Step 4: Dev tools ────────────────────────────────────────────────────
     sel_tools = _select_many(
         "Which developer tools to include?",
         "Pre-checked items are recommended for most ROS2 workflows.",
@@ -447,7 +414,6 @@ def _wizard() -> None:
     _selections["tools"] = sel_tools
     _draw_panel(5)
 
-    # ── Step 5: User ─────────────────────────────────────────────────────────
     user_type = _select_one(
         "Run the container as:",
         "Non-root matches your host UID and avoids volume permission issues.",
@@ -481,7 +447,6 @@ def _wizard() -> None:
     )
     _draw_panel(6)
 
-    # ── Step 6: Workspace ────────────────────────────────────────────────────
     workspace = _input_line(
         "Workspace path inside the container",
         "Absolute path — this will be mounted from your host.",
@@ -491,7 +456,6 @@ def _wizard() -> None:
     _selections["workspace"] = green(workspace)
     _draw_panel(7)
 
-    # ── Step 7: Container name ───────────────────────────────────────────────
     container_name = _input_line(
         "Container / service name",
         "Used as the docker-compose service name and container hostname.",
@@ -502,7 +466,6 @@ def _wizard() -> None:
     _selections["container"] = green(container_name)
     _draw_panel(8)
 
-    # ── Step 8: Output directory ─────────────────────────────────────────────
     output_dir = _input_line(
         "Output directory",
         "Where to write the files. Created if it does not exist.",
@@ -511,7 +474,6 @@ def _wizard() -> None:
     )
     _selections["output"] = output_dir
 
-    # ── Generate files ───────────────────────────────────────────────────────
     cfg = {
         "distro":         distro,
         "variant":        variant,
@@ -537,7 +499,6 @@ def _wizard() -> None:
         print(red(f"\n  ✗  Could not write files: {exc}"), file=sys.stderr)
         sys.exit(1)
 
-    # Erase the panel before printing the final summary
     if _IS_TTY and _panel_lines > 0:
         _up(_panel_lines)
         _clear_down()
@@ -552,31 +513,11 @@ def _wizard() -> None:
         print(cyan("─" * W))
         print((abs_out / "Dockerfile").read_text(encoding="utf-8"))
 
-# ── Entry point ───────────────────────────────────────────────────────────────
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="ros2-dockergen",
         description="Generate a Dockerfile, docker-compose.yml and README for a ROS2 project.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"""
-wizard steps:
-  1. ROS2 distro      — Jazzy (Ubuntu 24.04), Humble (22.04), Kilted
-  2. Base variant     — ros-core / ros-base / desktop / desktop-full
-  3. ROS2 packages    — Nav2, MoveIt2, SLAM, RViz2, TurtleBot3, CUDA, …
-  4. Dev tools        — colcon, rosdep, cmake, git, tmux, zsh, x11, …
-  5. User setup       — root or non-root with custom username / UID
-  6. Workspace path   — absolute path inside the container
-  7. Container name   — used for docker-compose service name
-  8. Output directory — where the generated files are written
-
-navigation:
-  Enter               accept the shown default
-  numbers e.g. 1,3,5  select items in a multi-choice list
-  a                   select all items
-  n                   select no items
-  q                   quit at any prompt — no files are written
-        """,
     )
     parser.add_argument(
         "--version", "-v",
@@ -591,7 +532,6 @@ navigation:
         _quit()
     except KeyboardInterrupt:
         _quit()
-
 
 if __name__ == "__main__":
     main()

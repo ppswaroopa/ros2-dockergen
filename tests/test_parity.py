@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "src"))
-from core import GeneratorCore
+from ros2_dockergen.core import GeneratorCore
 
 CASES = [
     {"name": "jazzy / ros-base / nav2+rviz2 / non-root", "config": {
@@ -58,7 +58,7 @@ RUNNER_PATH.write_text(
     "import { fileURLToPath } from 'url';\n"
     "const __dirname = path.dirname(fileURLToPath(import.meta.url));\n"
     "const R = path.join(__dirname, '..');\n"
-    "const config = JSON.parse(fs.readFileSync(path.join(R, 'data', 'config.json'), 'utf8'));\n"
+    "const config = JSON.parse(fs.readFileSync(path.join(R, 'src', 'ros2_dockergen', 'data', 'config.json'), 'utf8'));\n"
     "CORE.init(config);\n"
     "const raw = JSON.parse(process.argv[2]);\n"
     "const cfg = {\n"
@@ -84,7 +84,7 @@ def run_js(config):
     return json.loads(r.stdout)
 
 def run_py(config):
-    core = GeneratorCore.from_file(ROOT / "data" / "config.json")
+    core = GeneratorCore.from_file(ROOT / "src" / "ros2_dockergen" / "data" / "config.json")
     return {"dockerfile": core.build_dockerfile(config),
             "compose":    core.build_compose(config),
             "readme":     core.build_readme(config)}

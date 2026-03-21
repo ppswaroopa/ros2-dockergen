@@ -33,17 +33,14 @@
 curl -fsSL https://raw.githubusercontent.com/ppswaroopa/ros2-dockergen/main/install.sh | bash
 ```
 
-The script will:
-1. Check for Python 3.10+
-2. Copy the tool to `/usr/local/lib/ros2-dockergen/`
-3. Create a `/usr/local/bin/ros2-dockergen` symlink
+The script will check for Python 3.10+ and install the package globally using `pip`.
 
-### Option B — Clone and install locally
+### Option B — Install via pip (from source)
 
 ```bash
 git clone https://github.com/ppswaroopa/ros2-dockergen.git
 cd ros2-dockergen
-./install.sh
+pip install .
 ```
 
 ### Option C — Run directly without installing
@@ -51,7 +48,8 @@ cd ros2-dockergen
 ```bash
 git clone https://github.com/ppswaroopa/ros2-dockergen.git
 cd ros2-dockergen
-python3 bin/ros2-dockergen
+export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+python3 -m ros2_dockergen
 ```
 
 ---
@@ -98,18 +96,18 @@ Then writes three files:
 ## 📁 Project structure
 
 ```
-- `bin/`: CLI entry points and scripts.
-- `src/`: Core logic (Python for CLI, JavaScript for Web).
-- `data/`: `config.json` single source of truth.
+- `pyproject.toml`: Modern Python package configuration.
+- `src/ros2_dockergen/`: Core Python package (logic + bundled config).
+- `src/core.js`: Web-compatible core logic in JavaScript.
+- `bin/`: CLI scripts and legacy entry points.
 - `tests/`: Parity and validation suite.
-- `CI/`: helper scripts for CI/CD.
 - `.github/workflows/`: Automated CI pipeline.
 - `index.html`: Webpage to generate Dockerfiles.
 ```
 
 ### How it works
 
-All package knowledge lives in `data/config.json`. The `core.py` and `core.js` only read the config and render output strings from it. Web UI and CLI share the same knowledge base. To add a new package or distro, you edit `config.json` once and both tools update automatically.
+The single source of truth for all ROS2 metadata lives in `src/ros2_dockergen/data/config.json`. The Python CLI and Web UI both consume this config to ensure identical output. For the Python side, this config is bundled as a package resource.
 
 ### Running the parity tests
 

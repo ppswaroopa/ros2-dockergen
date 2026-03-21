@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ros2-dockergen"
+version = "1.0.0"
+description = "Interactive CLI wizard for generating ROS2 Docker environments"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["ros2", "docker", "robotics", "cli", "generator"]
+authors = [
+    { name = "Pranava Swaroopa", email = "ppswaroopa@gmail.com" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Code Generators",
+]
+dependencies = []
+
+[project.scripts]
+ros2-dockergen = "ros2_dockergen.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ros2_dockergen"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/ros2_dockergen", "README.md", "LICENSE"]
