@@ -13,6 +13,7 @@ keywords = ["ros2", "docker", "robotics", "cli", "generator"]
 authors = [
     { name = "Pranava Swaroopa", email = "ppswaroopa@gmail.com" }
 ]
+
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -21,6 +22,10 @@ classifiers = [
     "Topic :: Software Development :: Code Generators",
 ]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ppswaroopa/ros2-dockergen"
+Repository = "https://github.com/ppswaroopa/ros2-dockergen"
 
 [project.scripts]
 ros2-dockergen = "ros2_dockergen.cli:main"

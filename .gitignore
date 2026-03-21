@@ -27,3 +27,7 @@ ros2-docker-gen/tests/_runner.js
 .DS_Store
 Thumbs.db
 *.swp
+dist/
+venv/
+*.egg-info/
+__pycache__/
