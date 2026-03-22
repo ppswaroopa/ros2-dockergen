@@ -15,7 +15,7 @@ const VERSION = '1.0.0';
 const _ROOT = path.join(__dirname, '..');
 
 // Initialize with shared config
-const configPath = path.join(_ROOT, 'data', 'config.json');
+const configPath = path.join(_ROOT, 'src', 'ros2_dockergen', 'data', 'config.json');
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 CORE.init(config);
 
@@ -355,10 +355,11 @@ async function main() {
     }
 
     step('Workspace Path');
+    const defaultWs = userType === 'root' ? '/root/ros2_ws' : `/home/${username}/ros2_ws`;
     const workspace = await input(
         'Workspace path inside the container',
         'Absolute path where your ROS2 workspace will live (mounted from host).',
-        '/ros2_ws',
+        defaultWs,
         v => v.startsWith('/') || 'Must be an absolute path starting with /'
     );
 

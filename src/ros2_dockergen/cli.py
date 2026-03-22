@@ -447,10 +447,11 @@ def _wizard() -> None:
     )
     _draw_panel(6)
 
+    default_ws = "/root/ros2_ws" if user_type == "root" else f"/home/{username}/ros2_ws"
     workspace = _input_line(
         "Workspace path inside the container",
         "Absolute path — this will be mounted from your host.",
-        "/ros2_ws",
+        default_ws,
         lambda v: True if v.startswith("/") else "Must be an absolute path starting with /",
     )
     _selections["workspace"] = green(workspace)
