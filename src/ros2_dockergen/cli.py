@@ -423,13 +423,13 @@ def _wizard() -> None:
         ],
     )
 
-    username = "ros"
+    username = "ros-dev"
     uid      = 1000
     if user_type == "user":
         username = _input_line(
             "Username inside the container",
             "Creates a Linux user account with this name.",
-            "ros",
+            "ros-dev",
             lambda v: (True if re.match(r"^[a-z_][a-z0-9_-]{0,30}$", v)
                        else "Lowercase letters, digits, _ or - (max 31 chars)"),
         )
@@ -447,10 +447,11 @@ def _wizard() -> None:
     )
     _draw_panel(6)
 
+    default_ws = "/root/ros2_ws" if user_type == "root" else f"/home/{username}/ros2_ws"
     workspace = _input_line(
         "Workspace path inside the container",
         "Absolute path — this will be mounted from your host.",
-        "/ros2_ws",
+        default_ws,
         lambda v: True if v.startswith("/") else "Must be an absolute path starting with /",
     )
     _selections["workspace"] = green(workspace)

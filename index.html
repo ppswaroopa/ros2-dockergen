@@ -2070,19 +2070,33 @@
         }
 
         function selectUserType(el) {
+            const oldUserType = state.userType;
             document.querySelectorAll('#usertype-grid .radio-card').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
             state.userType = el.dataset.usertype;
             const fields = document.getElementById('user-fields');
             if (fields) fields.style.opacity = state.userType === 'root' ? '0.4' : '1';
+
+            const ws = document.getElementById('workspace');
+            if (ws) {
+                if (state.userType === 'root' && ws.value === `/home/${state.username}/ros2_ws`) {
+                    ws.value = '/root/ros2_ws';
+                } else if (state.userType === 'custom' && ws.value === '/root/ros2_ws') {
+                    ws.value = `/home/${state.username}/ros2_ws`;
+                }
+            }
             generateFiles();
         }
 
         function updateUsername(val) {
+            const oldUsername = state.username;
             state.username = val || 'ros-dev';
             const ws = document.getElementById('workspace');
-            if (ws && ws.value.includes('/home/')) {
-                // auto-update workspace path
+            if (ws && state.userType !== 'root') {
+                const oldExpected = `/home/${oldUsername}/ros2_ws`;
+                if (ws.value === oldExpected || ws.value === '') {
+                    ws.value = `/home/${state.username}/ros2_ws`;
+                }
             }
             generateFiles();
         }

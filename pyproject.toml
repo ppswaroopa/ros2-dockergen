@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ros2-dockergen"
-version = "1.0.1"
+version = "1.0.2"
 description = "Interactive CLI wizard for generating ROS2 Docker environments"
 readme = "README.md"
 requires-python = ">=3.10"
