@@ -423,13 +423,13 @@ def _wizard() -> None:
         ],
     )
 
-    username = "ros"
+    username = "ros-dev"
     uid      = 1000
     if user_type == "user":
         username = _input_line(
             "Username inside the container",
             "Creates a Linux user account with this name.",
-            "ros",
+            "ros-dev",
             lambda v: (True if re.match(r"^[a-z_][a-z0-9_-]{0,30}$", v)
                        else "Lowercase letters, digits, _ or - (max 31 chars)"),
         )

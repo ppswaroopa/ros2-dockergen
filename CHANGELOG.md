@@ -7,14 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-03-24
+
 ### Added
-- CHANGELOG.md added.
+- Created `CHANGELOG.md` to track project history.
 
 ### Fixed
-- Auto-update path for the workspace based on username and user type selection in the interactive wizard.
+- Auto-update workspace path based on username and user-type selections.
+- Unified default username to `ros-dev` across CLI and Web for parity.
 
 ### Changed
-- Updated the "Flow" hero graphic in `README.md` with an improved design reflecting latest features.
+- Refreshed the "Flow" hero graphic in `README.md` with an updated design.
 
 ## [1.0.1] - 2026-03-21
 
