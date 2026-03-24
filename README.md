@@ -7,7 +7,7 @@
 
 <br />
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ppswaroopa/ros2-dockergen/main/docs/hero.jpg" alt="ROS2 DockerGen Flow" width="100%">
+  <img src="https://raw.githubusercontent.com/ppswaroopa/ros2-dockergen/main/docs/hero.png" alt="ROS2 DockerGen Flow" width="100%">
 </p>
 <br />
 
