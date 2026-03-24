@@ -25,6 +25,7 @@ jobs:
           pip install -e .
       - name: Run tests
         run: |
+          python3 tests/test_version.py
           python3 tests/test_parity.py
 
   build:

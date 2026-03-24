@@ -2247,6 +2247,25 @@
 
                 // 3. Initialize and generate
                 core.init(config);
+
+                // Dynamic version injection
+                const ver = config.version || "1.0";
+                document.title = `ROS2 Docker Generator v${ver} — Get Robotics Running Fast`;
+                document.querySelectorAll('.logo span').forEach(el => {
+                    const txt = el.textContent.trim();
+                    if (txt === 'v1.0' || txt === 'v1.0.2') el.textContent = `v${ver}`;
+                });
+                document.querySelectorAll('.nav-badge').forEach(el => {
+                    if (el.textContent.includes('v1.0')) {
+                        el.textContent = el.textContent.replace(/v1\.0(\.2)?/, `v${ver}`);
+                    }
+                });
+                document.querySelectorAll('.footer-text').forEach(el => {
+                    if (el.textContent.includes('v1.0')) {
+                        el.textContent = el.textContent.replace(/v1\.0(\.2)?/, `v${ver}`);
+                    }
+                });
+
                 console.log('Core initialized! Building initial files...');
                 generateFiles();
 

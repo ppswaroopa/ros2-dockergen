@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-regex"]
 build-backend = "hatchling.build"
 
 [project]
 name = "ros2-dockergen"
-version = "1.0.2"
+dynamic = ["version"]
 description = "Interactive CLI wizard for generating ROS2 Docker environments"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,6 +27,11 @@ dependencies = []
 Homepage = "https://github.com/ppswaroopa/ros2-dockergen"
 Repository = "https://github.com/ppswaroopa/ros2-dockergen"
 "Bug Tracker" = "https://github.com/ppswaroopa/ros2-dockergen/issues"
+
+[tool.hatch.version]
+source = "regex"
+path = "src/ros2_dockergen/data/config.json"
+pattern = '"version": "(?P<version>[^"]+)"'
 
 [project.scripts]
 ros2-dockergen = "ros2_dockergen.cli:main"

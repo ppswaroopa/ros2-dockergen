@@ -4,14 +4,6 @@ import sys
 import re
 from pathlib import Path
 
-try:
-    import tomllib
-except ImportError:
-    # Fallback for Python < 3.11 if needed, but the environment has 3.12
-    import pip
-    pip.main(['install', 'tomli'])
-    import tomli as tomllib
-
 ROOT = Path(__file__).parent.parent
 SRC = ROOT / "src"
 sys.path.insert(0, str(SRC))
@@ -19,53 +11,55 @@ sys.path.insert(0, str(SRC))
 from ros2_dockergen.core import GeneratorCore
 
 def test_versions():
-    print("Checking version consistency...")
+    print("Checking version consistency (Source of Truth: config.json)...")
     
-    # 1. Read pyproject.toml (Source of Truth)
-    pyproject_path = ROOT / "pyproject.toml"
-    with open(pyproject_path, "rb") as f:
-        pyproject = tomllib.load(f)
-    version = pyproject["project"]["version"]
-    print(f"  pyproject.toml: {version}")
-
-    # 2. Check config.json
+    # 1. Read config.json (New Source of Truth)
     config_path = SRC / "ros2_dockergen" / "data" / "config.json"
+    if not config_path.exists():
+        print(f"  ✗ config.json not found at {config_path}")
+        sys.exit(1)
+        
     with open(config_path, "r") as f:
         config = json.load(f)
-    config_version = config["version"]
-    print(f"  config.json:    {config_version}")
-    
-    if config_version != version:
-        print(f"  ✗ Version mismatch! {config_version} != {version}")
+    version = config.get("version")
+    if not version:
+        print("  ✗ No version found in config.json")
         sys.exit(1)
+    print(f"  config.json:      {version}")
 
-    # 3. Check package.json
+    # 2. Check pyproject.toml (should be dynamic)
+    pyproject_path = ROOT / "pyproject.toml"
+    with open(pyproject_path, "r") as f:
+        pyproject_content = f.read()
+    
+    if 'dynamic = ["version"]' not in pyproject_content:
+        print("  ✗ pyproject.toml is not configured for dynamic versioning")
+        sys.exit(1)
+    if 'source = "regex"' not in pyproject_content or 'path = "src/ros2_dockergen/data/config.json"' not in pyproject_content:
+        print("  ✗ pyproject.toml hatch-regex configuration is missing or incorrect")
+        sys.exit(1)
+    print(f"  pyproject.toml:   Dynamic")
+
+    # 3. Check package.json (should match config.json)
     package_path = ROOT / "package.json"
     if package_path.exists():
         with open(package_path, "r") as f:
             package = json.load(f)
-        package_version = package["version"]
-        print(f"  package.json:   {package_version}")
+        package_version = package.get("version")
+        print(f"  package.json:     {package_version}")
         if package_version != version:
-            print(f"  ✗ Version mismatch! {package_version} != {version}")
+            print(f"  ✗ Metadata mismatch! package.json={package_version} != config.json={version}")
+            print("    Run ./tests/sync_version.py to fix this.")
             sys.exit(1)
     
-    # 4. Check index.html (partial match for vX.Y.Z)
+    # 4. Check index.html dynamic logic
     index_path = ROOT / "index.html"
     if index_path.exists():
         content = index_path.read_text()
-        # We expect at least one occurrence of the version string
-        if f"v{version}" not in content:
-            print(f"  ✗ index.html does not contain v{version}")
-            # We'll be lenient if it's just v1.0
-            # Let's check if there are ANY old versions left
-            old_versions = re.findall(r"v1\.0\.[01]", content)
-            if old_versions:
-                print(f"  ✗ found old versions in index.html: {set(old_versions)}")
-                sys.exit(1)
-            print("  ✓ index.html OK (uses abbreviated v1.0)")
-        else:
-            print(f"  index.html:     {version}")
+        if 'const ver = config.version || "1.0";' not in content:
+            print("  ✗ index.html is missing dynamic version injection logic")
+            sys.exit(1)
+        print("  index.html:       Dynamic")
 
     # 5. Verify generated Dockerfile header
     core = GeneratorCore(config)
@@ -87,12 +81,12 @@ def test_versions():
         sys.exit(1)
     
     gen_version = header_match.group(1)
-    print(f"  Generated DF:   {gen_version}")
+    print(f"  Generated DF:     {gen_version}")
     if gen_version != version:
-        print(f"  ✗ Generated version mismatch! {gen_version} != {version}")
+        print(f"  ✗ Generated version mismatch! v{gen_version} != v{version}")
         sys.exit(1)
 
-    print("\n✅ All versions are consistent!")
+    print("\nAll versions are consistent or are dynamic!")
 
 if __name__ == "__main__":
     test_versions()
