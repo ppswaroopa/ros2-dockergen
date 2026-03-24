@@ -3,16 +3,7 @@
   "version": "1.0.2",
   "description": "CLI tool to generate ROS2 Dockerfiles and docker-compose files interactively",
   "type": "module",
-  "bin": {
-    "ros2-dockergen": "./bin/cli.js"
-  },
-  "scripts": {
-    "start": "node bin/cli.js"
-  },
   "dependencies": {},
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "keywords": [
     "ros2",
     "docker",
