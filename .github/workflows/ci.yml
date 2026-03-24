@@ -83,6 +83,19 @@ jobs:
               - 'index.html'
               - 'README.md'
 
+  # ── Version Consistency ──────────────────────────────────────
+  version-check:
+    name: "Version Consistency"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run Version Check
+        run: |
+          PYTHONPATH=src python3 tests/test_version.py
+
   # ── Base image — runs per distro ────────────────────────────
   # Re-runs when generate.js changes or on workflow_dispatch.
   # Humble and Jazzy are tested independently because their
@@ -279,6 +292,7 @@ jobs:
     if: always()
     needs:
       - changes
+      - version-check
       - base-humble
       - base-humble-desktop
       - base-jazzy
@@ -294,7 +308,8 @@ jobs:
     steps:
       - name: Check results
         run: |
-          declare -A results
+          results[changes]="${{ needs.changes.result }}"
+          results[version-check]="${{ needs.version-check.result }}"
           results[base-humble]="${{ needs.base-humble.result }}"
           results[base-humble-desktop]="${{ needs.base-humble-desktop.result }}"
           results[base-jazzy]="${{ needs.base-jazzy.result }}"
