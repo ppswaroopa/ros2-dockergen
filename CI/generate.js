@@ -27,7 +27,7 @@ const userType = getArg('usertype', 'user'); // Changed from 'custom' to match c
 
 // ── Load Config & Init Core ───────────────────────────────────
 const _ROOT = path.join(__dirname, '..');
-const configPath = path.join(_ROOT, 'data', 'config.json');
+const configPath = path.join(_ROOT, 'src', 'ros2_dockergen', 'data', 'config.json');
 const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 CORE.init(configData);
 
