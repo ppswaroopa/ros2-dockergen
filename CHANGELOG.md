@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-25
+
+### Added
+- Centralized project versioning using `config.json` as the single source of truth.
+- Integrated `hatch-regex` for dynamic versioning in `pyproject.toml`.
+- Added a comprehensive version consistency test suite (`tests/test_version.py`).
+- Added `tests/sync_version.py` for automated version management.
+- Added GitHub Actions for automated publishing to GitHub Releases.
+
+### Changed
+- Refactored `index.html` and CLI to dynamically consume version from `config.json`.
+
+### Removed
+- Legacy Node-based CLI implementation in favor of the Python-based CLI.
+
 ## [1.0.2] - 2026-03-24
 
 ### Added
