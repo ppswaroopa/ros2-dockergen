@@ -35,6 +35,39 @@ def sync():
                 f.write("\n")
         else:
             print("package.json is already in sync.")
+            
+    # Sync index.html
+    index_path = root / "index.html"
+    if index_path.exists():
+        import re
+        content = index_path.read_text()
+        
+        # 1. Update <title>
+        new_content = re.sub(
+            r'<title>ROS2 Docker Generator v[\d\.]+ — Get Robotics Running Fast</title>',
+            f'<title>ROS2 Docker Generator v{version} — Get Robotics Running Fast</title>',
+            content
+        )
+        
+        # 2. Update all elements with class="app-version-text"
+        new_content = re.sub(
+            r'(class="app-version-text"[^>]*>v)[\d\.]+',
+            f'\\g<1>{version}',
+            new_content
+        )
+        
+        # 3. Update the fallback 'const ver' in JS
+        new_content = re.sub(
+            r'const ver = config\.version \|\| "[\d\.]+";',
+            f'const ver = config.version || "{version}";',
+            new_content
+        )
+        
+        if content != new_content:
+            print(f"Updating index.html static version strings to: {version}")
+            index_path.write_text(new_content)
+        else:
+            print("index.html is already in sync.")
     
     print("Sync complete!")
 

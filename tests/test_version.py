@@ -52,14 +52,36 @@ def test_versions():
             print("    Run ./tests/sync_version.py to fix this.")
             sys.exit(1)
     
-    # 4. Check index.html dynamic logic
+    # 4. Check index.html dynamic logic and static versions
     index_path = ROOT / "index.html"
     if index_path.exists():
         content = index_path.read_text()
-        if 'const ver = config.version || "1.0";' not in content:
+        if 'const ver = config.version ||' not in content:
             print("  ✗ index.html is missing dynamic version injection logic")
             sys.exit(1)
-        print("  index.html:       Dynamic")
+            
+        # Check static versions have been correctly synced
+        title_expected = f"<title>ROS2 Docker Generator v{version} — Get Robotics Running Fast</title>"
+        js_expected = f'const ver = config.version || "{version}";'
+        
+        if title_expected not in content or js_expected not in content:
+            print(f"  ✗ index.html has out-of-sync <title> or JS fallback! Expected v{version}.")
+            print("    Run ./tests/sync_version.py to fix this.")
+            sys.exit(1)
+            
+        # Verify all .app-version-text spans match the version
+        static_mentions = re.findall(r'class="app-version-text"[^>]*>v([\d\.]+)<', content)
+        if not static_mentions:
+            print("  ✗ Could not find any .app-version-text elements in index.html to verify.")
+            sys.exit(1)
+            
+        for found_version in static_mentions:
+            if found_version != version:
+                print(f"  ✗ index.html has stale static version 'v{found_version}'. Expected 'v{version}'.")
+                print("    Run ./tests/sync_version.py to fix this.")
+                sys.exit(1)
+                
+        print("  index.html:       Dynamic + Static strings in sync")
 
     # 5. Verify generated Dockerfile header
     core = GeneratorCore(config)
