@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a comprehensive version consistency test suite (`tests/test_version.py`).
 - Added `tests/sync_version.py` for automated version management.
 - Added GitHub Actions for automated publishing to GitHub Releases.
+- Automated publication to PyPI and GitHub Releases via `softprops/action-gh-release@v2`.
+- `build-check` verification step in PR pipelines (`ci.yml`) to guarantee PyPI package build success.
+- Local Git `pre-push` hook installation script (`scripts/install_hooks.sh`) for fast local CI checks.
 
 ### Changed
 - Refactored `index.html` and CLI to dynamically consume version from `config.json`.
