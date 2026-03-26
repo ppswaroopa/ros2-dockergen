@@ -96,6 +96,25 @@ jobs:
         run: |
           PYTHONPATH=src python3 tests/test_version.py
 
+  # ── Python Build Verification ─────────────────────────────────
+  build-check:
+    name: "Python Package Build Check"
+    needs: changes
+    if: |
+      needs.changes.outputs.any == 'true' ||
+      github.event.inputs.run_all == 'true' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build tool
+        run: python3 -m pip install build
+      - name: Build sdist and wheel
+        run: python3 -m build
+
   # ── Base image — runs per distro ────────────────────────────
   # Re-runs when generate.js changes or on workflow_dispatch.
   # Humble and Jazzy are tested independently because their
@@ -293,6 +312,7 @@ jobs:
     needs:
       - changes
       - version-check
+      - build-check
       - base-humble
       - base-humble-desktop
       - base-jazzy
@@ -310,6 +330,7 @@ jobs:
         run: |
           results[changes]="${{ needs.changes.result }}"
           results[version-check]="${{ needs.version-check.result }}"
+          results[build-check]="${{ needs.build-check.result }}"
           results[base-humble]="${{ needs.base-humble.result }}"
           results[base-humble-desktop]="${{ needs.base-humble-desktop.result }}"
           results[base-jazzy]="${{ needs.base-jazzy.result }}"
