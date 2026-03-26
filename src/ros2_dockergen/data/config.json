@@ -1,8 +1,6 @@
 {
   "_comment": "ros2-dockergen shared configuration — consumed by both core.js (web) and core.py (CLI). Do not encode logic in either consumer; encode it here as rules.",
-
-  "version": "1.0.1",
-
+  "version": "1.1.0",
   "distros": {
     "jazzy": {
       "label": "Jazzy",
@@ -29,7 +27,6 @@
       "recommended": false
     }
   },
-
   "variants": {
     "ros-core": {
       "label": "ros-core",
@@ -51,10 +48,11 @@
       "description": "Desktop + extra simulation and sensor packages",
       "base_image": "osrf/ros:{distro}-desktop",
       "_comment": "OSRF does not publish a desktop-full tag; we use desktop as FROM and install desktop-full on top",
-      "extra_apt": ["ros-{distro}-desktop-full"]
+      "extra_apt": [
+        "ros-{distro}-desktop-full"
+      ]
     }
   },
-
   "ros_packages": {
     "nav2": {
       "label": "Nav2",
@@ -86,7 +84,10 @@
         "ros-{distro}-gazebo-ros-pkgs",
         "ros-{distro}-gazebo-ros2-control"
       ],
-      "skip_on_distros": ["jazzy", "kilted"],
+      "skip_on_distros": [
+        "jazzy",
+        "kilted"
+      ],
       "_skip_reason": "Gazebo Classic is EOL on Ubuntu 24.04 and above"
     },
     "gz_sim": {
@@ -112,8 +113,12 @@
         "ros-{distro}-turtlebot3-msgs"
       ],
       "extra_apt_on_distros": {
-        "distros": ["humble"],
-        "apt": ["ros-{distro}-turtlebot3-simulations"]
+        "distros": [
+          "humble"
+        ],
+        "apt": [
+          "ros-{distro}-turtlebot3-simulations"
+        ]
       },
       "_extra_apt_reason": "turtlebot3-simulations only exists for Humble; Jazzy/Kilted dropped it",
       "env": {
@@ -192,7 +197,6 @@
       "_comment": "No apt packages; presence triggers nvidia/cuda base image substitution"
     }
   },
-
   "tools": {
     "colcon": {
       "label": "colcon",
@@ -356,19 +360,15 @@
       "apt": []
     }
   },
-
   "system_apt_always": [
     "software-properties-common",
     "apt-transport-https",
     "ca-certificates"
   ],
-
   "ros_build_tools_always": [
     "python3-rosinstall-generator"
   ],
-
   "cuda_base_image": "nvidia/cuda:{cuda_version}-devel-{ubuntu_image_suffix}",
-
   "cuda_ros_install_apt": [
     "curl",
     "gnupg2",
