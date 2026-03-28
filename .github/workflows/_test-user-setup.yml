@@ -78,9 +78,6 @@ jobs:
             -e EXPECTED_UID=1000 \
             -e EXPECT_SUDO=true \
             -e EXPECT_ZSH=true \
-            -e EXPECTED_WORKSPACE=/home/ros-dev/ros2_ws \
-            -v "${{ github.workspace }}/build-context:/home/ros-dev/ros2_ws" \
-            -w /home/ros-dev/ros2_ws \
             -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-test-user-custom:ci \
             bash /validate.sh
@@ -130,9 +127,6 @@ jobs:
             -e ROS_DISTRO=humble \
             -e CI_TEST_SUITE=user \
             -e EXPECTED_USER=root \
-            -e EXPECTED_WORKSPACE=/root/ros2_ws \
-            -v "${{ github.workspace }}/build-context:/root/ros2_ws" \
-            -w /root/ros2_ws \
             -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-test-user-root:ci \
             bash /validate.sh

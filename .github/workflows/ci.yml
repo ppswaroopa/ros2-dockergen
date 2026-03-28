@@ -309,9 +309,6 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO=${{ matrix.distro }} \
             -e CI_TEST_SUITE=build-tools \
-            -e EXPECTED_WORKSPACE=/home/ros-dev/ros2_ws \
-            -v "${{ github.workspace }}/build-context:/home/ros-dev/ros2_ws" \
-            -w /home/ros-dev/ros2_ws \
             -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-kitchen-sink:ci \
             bash /validate.sh

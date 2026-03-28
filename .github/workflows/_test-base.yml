@@ -72,9 +72,6 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO="${{ inputs.distro }}" \
             -e CI_TEST_SUITE=base \
-            -e EXPECTED_WORKSPACE=/home/ros-dev/ros2_ws \
-            -v "${{ github.workspace }}/build-context:/home/ros-dev/ros2_ws" \
-            -w /home/ros-dev/ros2_ws \
             -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-test-base-${{ inputs.distro }}-${{ inputs.variant }}:ci \
             bash /validate.sh
