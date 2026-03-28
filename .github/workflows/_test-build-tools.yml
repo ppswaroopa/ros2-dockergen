@@ -43,12 +43,13 @@ jobs:
 
       - name: Generate Dockerfile (all build tools enabled)
         run: |
+          HOST_UID="$(id -u)"
           node CI/generate.js \
             --distro   "${{ inputs.distro }}" \
             --variant  "ros-base" \
             --tools    "colcon,rosdep,python3,git,cmake,vcstool,bashrc,locale,sudo" \
             --username ros-dev \
-            --uid      1000 \
+            --uid      "${HOST_UID}" \
             --out      ./build-context
 
       - name: Show Dockerfile
@@ -76,6 +77,9 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO="${{ inputs.distro }}" \
             -e CI_TEST_SUITE=build-tools \
+            -e EXPECTED_WORKSPACE=/home/ros-dev/ros2_ws \
+            -v "${{ github.workspace }}/build-context:/home/ros-dev/ros2_ws" \
+            -w /home/ros-dev/ros2_ws \
             -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-test-tools-${{ inputs.distro }}:ci \
             bash /validate.sh

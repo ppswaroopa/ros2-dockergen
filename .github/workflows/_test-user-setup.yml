@@ -40,13 +40,14 @@ jobs:
 
       - name: Generate Dockerfile (custom user, sudo enabled)
         run: |
+          HOST_UID="$(id -u)"
           node CI/generate.js \
             --distro   humble \
             --variant  ros-base \
-            --tools    "bashrc,locale,sudo" \
-            --usertype custom \
+            --tools    "bashrc,locale,sudo,zsh" \
+            --usertype user \
             --username ros-dev \
-            --uid      1000 \
+            --uid      "${HOST_UID}" \
             --out      ./build-context
 
       - name: Show Dockerfile
@@ -75,8 +76,12 @@ jobs:
             -e ROS_DISTRO=humble \
             -e CI_TEST_SUITE=user \
             -e EXPECTED_USER=ros-dev \
-            -e EXPECTED_UID=1000 \
+            -e EXPECTED_UID="$(id -u)" \
             -e EXPECT_SUDO=true \
+            -e EXPECT_ZSH=true \
+            -e EXPECTED_WORKSPACE=/home/ros-dev/ros2_ws \
+            -v "${{ github.workspace }}/build-context:/home/ros-dev/ros2_ws" \
+            -w /home/ros-dev/ros2_ws \
             -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-test-user-custom:ci \
             bash /validate.sh
@@ -126,6 +131,9 @@ jobs:
             -e ROS_DISTRO=humble \
             -e CI_TEST_SUITE=user \
             -e EXPECTED_USER=root \
+            -e EXPECTED_WORKSPACE=/root/ros2_ws \
+            -v "${{ github.workspace }}/build-context:/root/ros2_ws" \
+            -w /root/ros2_ws \
             -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-test-user-root:ci \
             bash /validate.sh

@@ -85,6 +85,69 @@ check_bashrc() {
   fi
 }
 
+check_zshrc() {
+  local expect_zsh="${EXPECT_ZSH:-false}"
+  if [ "$expect_zsh" != "true" ]; then
+    skip "zsh not expected for this config"
+    return
+  fi
+
+  section ".zshrc source line"
+  local user
+  user=$(whoami)
+  local zshrc
+  zshrc=$( [ "$user" = "root" ] && echo "/root/.zshrc" || echo "/home/${user}/.zshrc" )
+
+  if [ ! -f "$zshrc" ]; then
+    fail "$zshrc does not exist"
+    return
+  fi
+
+  local count
+  count=$(grep -c "source /opt/ros/${DISTRO}/setup.bash" "$zshrc" || echo "0")
+  if [ "$count" -eq 1 ]; then
+    pass ".zshrc sources setup.bash exactly once"
+  elif [ "$count" -eq 0 ]; then
+    fail ".zshrc is missing setup.bash source line"
+  else
+    fail ".zshrc sources setup.bash ${count} times"
+  fi
+
+  section "Oh My Zsh ownership"
+  local user_home
+  user_home=$( [ "$user" = "root" ] && echo "/root" || echo "/home/${user}" )
+  if [ -d "${user_home}/.oh-my-zsh" ]; then
+    local owner
+    owner=$(stat -c '%U' "${user_home}/.oh-my-zsh")
+    if [ "$owner" = "$user" ]; then
+      pass "${user_home}/.oh-my-zsh exists and is owned by $user"
+    else
+      fail "${user_home}/.oh-my-zsh owned by $owner (expected: $user)"
+    fi
+  else
+    fail "${user_home}/.oh-my-zsh does not exist"
+  fi
+}
+
+check_workdir_ready() {
+  section "Default workdir"
+  local expected_workspace="${EXPECTED_WORKSPACE:-$PWD}"
+  if [ "$PWD" = "$expected_workspace" ]; then
+    pass "current workdir = $PWD"
+  else
+    fail "current workdir = $PWD (expected: $expected_workspace)"
+  fi
+
+  section "Workdir write access"
+  local probe=".ci-write-test"
+  if touch "$probe" 2>/dev/null; then
+    rm -f "$probe"
+    pass "default workdir is writable"
+  else
+    fail "default workdir is not writable"
+  fi
+}
+
 # =============================================================
 # SUITE: base
 # =============================================================
@@ -92,6 +155,7 @@ run_base() {
   check_ros2_setup
   check_ros2_cli
   check_bashrc
+  check_workdir_ready
 
   section "ros2 topic list (basic DDS check)"
   source "/opt/ros/${DISTRO}/setup.bash" 2>/dev/null || true
@@ -113,10 +177,17 @@ run_base() {
 run_build_tools() {
   check_ros2_setup
   check_ros2_cli
+  check_workdir_ready
 
   section "colcon"
   if command -v colcon &>/dev/null; then
     pass "colcon found: $(colcon --version 2>&1 | head -1)"
+    if colcon mixin list >/tmp/colcon-mixin.log 2>&1; then
+      pass "colcon mixin list works from default workdir"
+    else
+      fail "colcon mixin list failed from default workdir"
+      cat /tmp/colcon-mixin.log
+    fi
   else
     fail "colcon not found"
   fi
@@ -183,7 +254,7 @@ check_colcon_build() {
   source "/opt/ros/${DISTRO}/setup.bash" 2>/dev/null || true
   
   local tmpdir
-  tmpdir=$(mktemp -d)
+  tmpdir=$(mktemp -d -p "$PWD" ci-colcon-XXXXXX)
   mkdir -p "$tmpdir/src/test_pkg"
   
   # Create a minimal package.xml and CMakeLists.txt
@@ -260,7 +331,7 @@ run_user() {
     fi
 
     section "Workspace"
-    local ws="/home/${current_user}/ros2_ws"
+    local ws="${EXPECTED_WORKSPACE:-/home/${current_user}/ros2_ws}"
     if [ -d "$ws" ]; then
       local ws_owner
       ws_owner=$(stat -c '%U' "$ws")
@@ -272,6 +343,8 @@ run_user() {
     else
       fail "$ws not found"
     fi
+
+    check_workdir_ready
 
     section "sudo"
     if [ "$expect_sudo" = "true" ]; then
@@ -285,9 +358,11 @@ run_user() {
     fi
   else
     pass "Running as root (root-mode build)"
+    check_workdir_ready
   fi
 
   check_bashrc
+  check_zshrc
 }
 
 # =============================================================
@@ -365,6 +440,7 @@ run_nvidia() {
   check_ros2_setup
   check_ros2_cli
   check_bashrc
+  check_workdir_ready
 }
 
 # =============================================================

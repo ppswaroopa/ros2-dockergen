@@ -28,6 +28,14 @@ else
     exit 1
 fi
 
+info "Running Output Shape Regression Tests..."
+if PYTHONPATH=src python3 tests/test_output_shape.py; then
+    success "Output shape tests passed."
+else
+    error "Output shape tests failed!"
+    exit 1
+fi
+
 # ── 2. Generator Smoke Tests ─────────────────────────────────
 info "Running Generator Smoke Tests..."
 SMOKE_DIR="/tmp/ros2-gen-smoke"
@@ -58,7 +66,7 @@ success "Generator smoke tests passed (Outputs in ${SMOKE_DIR})."
 
 # ── 3. CLI Help Check ───────────────────────────────────────
 info "Checking CLI help output..."
-if node bin/cli.js --help &>/dev/null; then
+if PYTHONPATH=src python3 -m ros2_dockergen --help &>/dev/null; then
     success "CLI help works."
 else
     error "CLI help failed!"

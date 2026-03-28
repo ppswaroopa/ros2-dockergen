@@ -23,7 +23,8 @@ const username = getArg('username', 'ros-dev');
 const uid = parseInt(getArg('uid', '1000'), 10);
 const outDir = getArg('out', './ci-output');
 const cname = getArg('container', 'ros2_dev');
-const userType = getArg('usertype', 'user'); // Changed from 'custom' to match core.js expected values: 'user' | 'root'
+const rawUserType = getArg('usertype', 'user');
+const userType = rawUserType === 'custom' ? 'user' : rawUserType;
 
 // ── Load Config & Init Core ───────────────────────────────────
 const _ROOT = path.join(__dirname, '..');

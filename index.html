@@ -1701,7 +1701,7 @@
 
             <div class="divider-label">User Type</div>
             <div class="radio-grid" id="usertype-grid">
-                <div class="radio-card selected" data-usertype="custom" onclick="selectUserType(this)">
+                <div class="radio-card selected" data-usertype="user" onclick="selectUserType(this)">
                     <div class="radio-dot"></div>
                     <div class="option-icon">👤</div>
                     <div class="option-name">Custom User</div>
@@ -1755,8 +1755,8 @@
                         <label class="form-label">Workspace Directory</label>
                         <input class="form-input" type="text" id="workspace" placeholder="/home/ros-dev/ros2_ws"
                             value="/home/ros-dev/ros2_ws" oninput="generateFiles()">
-                        <span class="form-hint">Where your ROS2 workspace will be created inside the
-                            container</span>
+                        <span class="form-hint">The generated compose file mounts the current directory
+                            here inside the container</span>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Container Name (Compose)</label>
@@ -1773,9 +1773,8 @@
                     <span class="toggle-icon">📜</span>
                     <div>
                         <div class="toggle-label">Auto-source ROS2 setup.bash</div>
-                        <div class="toggle-sub">Automatically source /opt/ros/$ROS_DISTRO/setup.bash in .bashrc
-                            on
-                            startup</div>
+                        <div class="toggle-sub">Automatically source /opt/ros/$ROS_DISTRO/setup.bash in
+                            your shell config; also writes .zshrc when zsh is selected</div>
                     </div>
                 </div>
                 <div class="toggle-switch"></div>
@@ -1947,7 +1946,7 @@
             variant: 'ros-base',
             packages: new Set(),
             tools: new Set(['colcon', 'rosdep', 'python3', 'git', 'x11', 'bashrc', 'locale', 'sudo']),
-            userType: 'custom',
+            userType: 'user',
             username: 'ros-dev',
             uid: '1000',
             workspace: '/home/ros-dev/ros2_ws',
@@ -2081,7 +2080,7 @@
             if (ws) {
                 if (state.userType === 'root' && ws.value === `/home/${state.username}/ros2_ws`) {
                     ws.value = '/root/ros2_ws';
-                } else if (state.userType === 'custom' && ws.value === '/root/ros2_ws') {
+                } else if (state.userType === 'user' && ws.value === '/root/ros2_ws') {
                     ws.value = `/home/${state.username}/ros2_ws`;
                 }
             }

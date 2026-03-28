@@ -58,30 +58,33 @@ jobs:
           base: ${{ github.base_ref || 'main' }}
           filters: |
             generator:
+              - 'src/**'
               - 'CI/generate.js'
               - 'CI/validate.sh'
               - '.github/workflows/ci.yml'
               - '.github/workflows/_test-base.yml'
             user_setup:
+              - 'src/**'
               - 'CI/generate.js'
               - 'CI/validate.sh'
               - '.github/workflows/_test-user-setup.yml'
             gui:
+              - 'src/**'
               - 'CI/generate.js'
               - 'CI/validate.sh'
               - '.github/workflows/_test-gui.yml'
             nvidia:
+              - 'src/**'
               - 'CI/generate.js'
               - 'CI/validate.sh'
               - '.github/workflows/_test-nvidia.yml'
             any:
               - 'src/**'
-              - 'data/**'
-              - 'bin/**'
               - 'CI/**'
               - '.github/workflows/**'
               - 'index.html'
               - 'README.md'
+              - 'tests/**'
 
   # ── Version Consistency ──────────────────────────────────────
   version-check:
@@ -95,6 +98,9 @@ jobs:
       - name: Run Version Check
         run: |
           PYTHONPATH=src python3 tests/test_version.py
+      - name: Run Output Shape Tests
+        run: |
+          PYTHONPATH=src python3 tests/test_output_shape.py
 
   # ── Python Build Verification ─────────────────────────────────
   build-check:
@@ -272,13 +278,14 @@ jobs:
           node-version: '20'
       - name: Generate Dockerfile (The Everything Config)
         run: |
+          HOST_UID="$(id -u)"
           node CI/generate.js \
             --distro   ${{ matrix.distro }} \
             --variant  desktop-full \
             --packages "nav2,slam_toolbox,cartographer,gazebo,rviz2,turtlebot3,moveit2,ros2_control,pcl,cv_bridge,tf2,cyclone_dds" \
             --tools    "colcon,rosdep,python3,git,cmake,nano,tmux,gdb,net_tools,vcstool,ssh,x11,zsh,bashrc,locale,sudo" \
             --username ros-dev \
-            --uid      1000 \
+            --uid      "${HOST_UID}" \
             --out      ./build-context
       - name: Validate Compose YAML
         run: docker compose -f ./build-context/docker-compose.yml config --quiet
@@ -297,6 +304,9 @@ jobs:
           docker run --rm \
             -e ROS_DISTRO=${{ matrix.distro }} \
             -e CI_TEST_SUITE=build-tools \
+            -e EXPECTED_WORKSPACE=/home/ros-dev/ros2_ws \
+            -v "${{ github.workspace }}/build-context:/home/ros-dev/ros2_ws" \
+            -w /home/ros-dev/ros2_ws \
             -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-kitchen-sink:ci \
             bash /validate.sh

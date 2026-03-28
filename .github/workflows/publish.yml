@@ -26,6 +26,7 @@ jobs:
       - name: Run tests
         run: |
           python3 tests/test_version.py
+          PYTHONPATH=src python3 tests/test_output_shape.py
           python3 tests/test_parity.py
 
   build:

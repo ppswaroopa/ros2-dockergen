@@ -56,13 +56,14 @@ jobs:
 
       - name: Generate Dockerfile (desktop + RViz2 + Gazebo)
         run: |
+          HOST_UID="$(id -u)"
           node CI/generate.js \
             --distro    "${{ inputs.distro }}" \
             --variant   "desktop" \
             --packages  "rviz2,gazebo" \
             --tools     "bashrc,locale,sudo,x11" \
             --username  ros-dev \
-            --uid       1000 \
+            --uid       "${HOST_UID}" \
             --out       ./build-context
 
       - name: Show Dockerfile
@@ -91,6 +92,8 @@ jobs:
             -e ROS_DISTRO="${{ inputs.distro }}" \
             -e DISPLAY=":99" \
             -e CI_TEST_SUITE=gui \
+            -v "${{ github.workspace }}/build-context:/home/ros-dev/ros2_ws" \
+            -w /home/ros-dev/ros2_ws \
             -v /tmp/.X11-unix:/tmp/.X11-unix \
             -v "${{ github.workspace }}/CI/validate.sh:/validate.sh:ro" \
             ros2-test-gui-${{ inputs.distro }}:ci \

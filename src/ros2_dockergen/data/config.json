@@ -194,6 +194,7 @@
       "description": "NVIDIA TensorRT inference engine — implies CUDA base image",
       "apt": [],
       "switches_base_image": true,
+      "readme_only": true,
       "_comment": "No apt packages; presence triggers nvidia/cuda base image substitution"
     }
   },
@@ -302,7 +303,6 @@
         "openssh-server"
       ],
       "expose_port": 22,
-      "compose_port": "2222:22",
       "post_install_run": "mkdir /var/run/sshd && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config"
     },
     "x11": {
@@ -332,7 +332,7 @@
       "apt": [
         "zsh"
       ],
-      "post_install_run": "sh -c \"$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended"
+      "post_install_run": "export HOME={home} && sh -c \"$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended"
     },
     "locale": {
       "label": "locale",

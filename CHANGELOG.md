@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Output-shape regression tests in `tests/test_output_shape.py` to verify repo-root workspace mounts, shell config generation, NVIDIA compose behavior, and README/package consistency.
+- Readiness checks in `CI/validate.sh` for writable default workspaces, `colcon mixin list`, and Oh My Zsh ownership in generated non-root containers.
+- CI workflow coverage for the new readiness invariants, including mounted default workspace validation and source-change triggers for heavier generator test jobs.
+
+### Changed
+- Generated `docker-compose.yml` now mounts the current directory into the configured ROS workspace by default instead of creating a nested `./ros2_ws` bind mount.
+- Generated Dockerfiles now install Oh My Zsh in the selected user's home after switching to that user, while keeping Zsh as a normal optional tool selection.
+- Generated shell bootstrap now writes ROS/environment setup into `.bashrc` when `bashrc` is selected and into `.zshrc` when `zsh` is selected.
+- Generated README content now reflects the repo-root workspace workflow, includes clearer NVIDIA host/runtime guidance, and hides readme-only package labels such as TensorRT unless they are actually installed.
+- CLI/web generation and CI helpers now consistently use the standard non-root `user` mode and current host UID mapping for dev-container readiness.
+
+### Fixed
+- Resolved generated non-root dev environments depending on Docker auto-creating a writable workspace directory with the correct ownership.
+- Resolved generated Zsh environments installing Oh My Zsh under `/root` instead of the selected non-root user.
+- Removed misleading generated SSH port documentation when host networking is enabled and Docker would discard published ports.
+
 ## [1.1.0] - 2026-03-25
 
 ### Added
