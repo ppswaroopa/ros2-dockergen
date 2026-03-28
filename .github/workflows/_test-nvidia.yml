@@ -44,14 +44,13 @@ jobs:
 
       - name: Generate Dockerfile (CUDA enabled)
         run: |
-          HOST_UID="$(id -u)"
           node CI/generate.js \
             --distro   "${{ inputs.distro }}" \
             --variant  "ros-base" \
             --packages "cuda" \
             --tools    "bashrc,locale,sudo,python3,colcon" \
             --username ros-dev \
-            --uid      "${HOST_UID}" \
+            --uid      1000 \
             --out      ./build-context
 
       - name: Show Dockerfile

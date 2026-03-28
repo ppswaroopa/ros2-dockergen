@@ -39,13 +39,12 @@ jobs:
 
       - name: Generate Dockerfile
         run: |
-          HOST_UID="$(id -u)"
           node CI/generate.js \
             --distro   "${{ inputs.distro }}" \
             --variant  "${{ inputs.variant }}" \
             --tools    "bashrc,locale,sudo" \
             --username ros-dev \
-            --uid      "${HOST_UID}" \
+            --uid      1000 \
             --out      ./build-context
 
       - name: Show Dockerfile

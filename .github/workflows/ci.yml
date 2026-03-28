@@ -284,14 +284,13 @@ jobs:
           node-version: '20'
       - name: Generate Dockerfile (The Everything Config)
         run: |
-          HOST_UID="$(id -u)"
           node CI/generate.js \
             --distro   ${{ matrix.distro }} \
             --variant  desktop-full \
             --packages "nav2,slam_toolbox,cartographer,gazebo,rviz2,turtlebot3,moveit2,ros2_control,pcl,cv_bridge,tf2,cyclone_dds" \
             --tools    "colcon,rosdep,python3,git,cmake,nano,tmux,gdb,net_tools,vcstool,ssh,x11,zsh,bashrc,locale,sudo" \
             --username ros-dev \
-            --uid      "${HOST_UID}" \
+            --uid      1000 \
             --out      ./build-context
       - name: Validate Compose YAML
         run: docker compose -f ./build-context/docker-compose.yml config --quiet

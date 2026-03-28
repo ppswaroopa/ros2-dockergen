@@ -40,14 +40,13 @@ jobs:
 
       - name: Generate Dockerfile (custom user, sudo enabled)
         run: |
-          HOST_UID="$(id -u)"
           node CI/generate.js \
             --distro   humble \
             --variant  ros-base \
             --tools    "bashrc,locale,sudo,zsh" \
             --usertype user \
             --username ros-dev \
-            --uid      "${HOST_UID}" \
+            --uid      1000 \
             --out      ./build-context
 
       - name: Show Dockerfile
@@ -76,7 +75,7 @@ jobs:
             -e ROS_DISTRO=humble \
             -e CI_TEST_SUITE=user \
             -e EXPECTED_USER=ros-dev \
-            -e EXPECTED_UID="$(id -u)" \
+            -e EXPECTED_UID=1000 \
             -e EXPECT_SUDO=true \
             -e EXPECT_ZSH=true \
             -e EXPECTED_WORKSPACE=/home/ros-dev/ros2_ws \
