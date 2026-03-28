@@ -92,6 +92,43 @@ class GeneratorCore:
             
         return names
 
+    def resolve_config(self, config):
+        """
+        Takes a raw user configuration and applies relationship rules,
+        automatic selections, and OS-specific scaffolding.
+        Returns a NEW resolved configuration dictionary.
+        """
+        res = config.copy()
+        distro = res["distro"]
+        variant = res["variant"]
+        packages = set(res.get("packages", []))
+        tools = set(res.get("tools", []))
+        
+        # 1. Variant Implications
+        v_cfg = self._cfg["variants"].get(variant, {})
+        if "implies_packages" in v_cfg:
+            for p_key in v_cfg["implies_packages"]:
+                if p_key == "gazebo_distro_specific":
+                    # Resolve which gazebo to use for this distro
+                    d_cfg = self._cfg["distros"].get(distro, {})
+                    p_key = d_cfg.get("gazebo_pkg", "gz_sim")
+                packages.add(p_key)
+                
+        # 2. GUI Dependencies (if any selected package is a GUI package, enable x11)
+        has_gui_pkg = False
+        for p_key in packages:
+            p_cfg = self._cfg["ros_packages"].get(p_key, {})
+            if p_cfg.get("is_gui"):
+                has_gui_pkg = True
+                break
+        
+        if has_gui_pkg:
+            tools.add("x11")
+            
+        res["packages"] = list(packages)
+        res["tools"] = list(tools)
+        return res
+
     def build_dockerfile(self, config):
         distro = config["distro"]
         variant = config["variant"]
@@ -296,6 +333,7 @@ class GeneratorCore:
         workspace = config["workspace"]
         container_name = config.get("containerName", config.get("container_name"))
         user_type = config.get("userType", config.get("user_type"))
+        host_os = config.get("host_os", config.get("hostOs", "linux"))
         
         is_root = user_type == "root"
         has_cuda = "cuda" in packages or "tensorrt" in packages
@@ -323,24 +361,38 @@ class GeneratorCore:
         ln("    environment:")
         ln(f"      - ROS_DISTRO={distro}")
         
+        # ── Environment ─────────────────────────────────────────────
         for tool_key in tools:
             tool = self._cfg["tools"].get(tool_key)
             if tool and tool.get("compose_env"):
                 for k, v in tool["compose_env"].items():
                     ln(f"      - {k}={v}")
                     
+        if "x11" in tools:
+            os_cfg = self._cfg["host_os"].get(host_os, self._cfg["host_os"]["linux"])
+            if "x11_env" in os_cfg:
+                for k, v in os_cfg["x11_env"].items():
+                    ln(f"      - {k}={v}")
+
         for pkg_key in packages:
             pkg = self._cfg["ros_packages"].get(pkg_key)
             if pkg and pkg.get("env"):
                 for k, v in pkg["env"].items():
                     ln(f"      - {k}={v}")
                     
+        # ── Volumes ─────────────────────────────────────────────────
         ln("    volumes:")
         ln(f"      - .:{workspace}:rw")
         for tool_key in tools:
             tool = self._cfg["tools"].get(tool_key)
             if tool and tool.get("compose_volumes"):
                 for v in tool["compose_volumes"]:
+                    ln(f"      - {v}")
+
+        if "x11" in tools:
+            os_cfg = self._cfg["host_os"].get(host_os, self._cfg["host_os"]["linux"])
+            if "x11_volumes" in os_cfg:
+                for v in os_cfg["x11_volumes"]:
                     ln(f"      - {v}")
                     
         if has_cuda:
@@ -353,6 +405,7 @@ class GeneratorCore:
             ln("              capabilities: [gpu, compute, utility]")
             
         return "\n".join(L)
+
 
     def build_readme(self, config):
         distro = config["distro"]

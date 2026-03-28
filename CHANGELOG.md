@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Intelligent Choice Relationships**: Variant selections like `desktop-full` now automatically imply required packages (`rviz2`, `gazebo`/`gz_sim`), and GUI packages automatically enable `x11` display forwarding.
+- **Host OS Awareness**: New "Host OS" selection (auto-detected in CLI and Web) provides tailored Docker Compose scaffolding for Linux, Windows 11 (WSLg), and Windows 10 (X11).
+- **Core Engine Upgrades**: New `resolve_config()` method in both Python and JS core modules to handle automatic dependency resolution and OS-specific scaffolding.
 - Output-shape regression tests in `tests/test_output_shape.py` to verify repo-root workspace mounts, shell config generation, NVIDIA compose behavior, and README/package consistency.
 - Web bundle regression tests in `tests/test_web_bundle.py` to verify the website zip export contains the expected files and preserves byte-identical generated content.
 - Readiness checks in `CI/validate.sh` for writable default workspaces, `colcon mixin list`, and Oh My Zsh ownership in generated non-root containers.

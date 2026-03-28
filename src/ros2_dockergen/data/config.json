@@ -16,7 +16,8 @@
       "ubuntu_codename": "noble",
       "ubuntu_image_suffix": "ubuntu24.04",
       "cuda_version": "12.6.0",
-      "recommended": true
+      "recommended": true,
+      "gazebo_pkg": "gz_sim"
     },
     "humble": {
       "label": "Humble",
@@ -24,7 +25,8 @@
       "ubuntu_codename": "jammy",
       "ubuntu_image_suffix": "ubuntu22.04",
       "cuda_version": "12.3.1",
-      "recommended": false
+      "recommended": false,
+      "gazebo_pkg": "gazebo"
     },
     "kilted": {
       "label": "Kilted",
@@ -32,7 +34,42 @@
       "ubuntu_codename": "noble",
       "ubuntu_image_suffix": "ubuntu24.04",
       "cuda_version": "12.6.0",
-      "recommended": false
+      "recommended": false,
+      "gazebo_pkg": "gz_sim"
+    }
+  },
+  "host_os": {
+    "linux": {
+      "label": "Linux",
+      "description": "Native X11 / Wayland support",
+      "x11_volumes": [
+        "/tmp/.X11-unix:/tmp/.X11-unix:rw"
+      ],
+      "x11_env": {
+        "DISPLAY": "${DISPLAY:-:0}"
+      }
+    },
+    "windows-11": {
+      "label": "Windows 11",
+      "description": "WSLg (Native GUI support)",
+      "x11_volumes": [
+        "/tmp/.X11-unix:/tmp/.X11-unix:rw",
+        "/mnt/wslg:/mnt/wslg:rw"
+      ],
+      "x11_env": {
+        "DISPLAY": "${DISPLAY:-:0}",
+        "WAYLAND_DISPLAY": "${WAYLAND_DISPLAY}",
+        "XDG_RUNTIME_DIR": "${XDG_RUNTIME_DIR}",
+        "PULSE_SERVER": "${PULSE_SERVER}"
+      }
+    },
+    "windows-10": {
+      "label": "Windows 10",
+      "description": "X11 (Requires VcXsrv/Xming on host)",
+      "x11_volumes": [],
+      "x11_env": {
+        "DISPLAY": "host.docker.internal:0.0"
+      }
     }
   },
   "variants": {
@@ -49,7 +86,8 @@
     "desktop": {
       "label": "desktop",
       "description": "Full desktop stack — rqt, RViz2, demos",
-      "base_image": "osrf/ros:{distro}-desktop"
+      "base_image": "osrf/ros:{distro}-desktop",
+      "implies_packages": ["rviz2"]
     },
     "desktop-full": {
       "label": "desktop-full",
@@ -58,7 +96,8 @@
       "_comment": "OSRF does not publish a desktop-full tag; we use desktop as FROM and install desktop-full on top",
       "extra_apt": [
         "ros-{distro}-desktop-full"
-      ]
+      ],
+      "implies_packages": ["rviz2", "gazebo_distro_specific"]
     }
   },
   "ros_packages": {
@@ -96,14 +135,16 @@
         "jazzy",
         "kilted"
       ],
-      "_skip_reason": "Gazebo Classic is EOL on Ubuntu 24.04 and above"
+      "_skip_reason": "Gazebo Classic is EOL on Ubuntu 24.04 and above",
+      "is_gui": true
     },
     "gz_sim": {
       "label": "Gazebo (gz-sim)",
       "description": "Modern Gazebo — Jazzy / Kilted",
       "apt": [
         "ros-{distro}-ros-gz"
-      ]
+      ],
+      "is_gui": true
     },
     "rviz2": {
       "label": "RViz2",
@@ -111,7 +152,8 @@
       "apt": [
         "ros-{distro}-rviz2",
         "ros-{distro}-rviz-common"
-      ]
+      ],
+      "is_gui": true
     },
     "turtlebot3": {
       "label": "TurtleBot3",
@@ -131,14 +173,16 @@
       "_extra_apt_reason": "turtlebot3-simulations only exists for Humble; Jazzy/Kilted dropped it",
       "env": {
         "TURTLEBOT3_MODEL": "waffle_pi"
-      }
+      },
+      "is_gui": true
     },
     "moveit2": {
       "label": "MoveIt2",
       "description": "Motion planning and manipulation",
       "apt": [
         "ros-{distro}-moveit"
-      ]
+      ],
+      "is_gui": true
     },
     "ros2_control": {
       "label": "ros2_control",
@@ -331,20 +375,16 @@
       "default": false,
       "apt": [
         "x11-apps",
-        "libx11-dev"
+        "libx11-dev",
+        "mesa-utils",
+        "libgl1-mesa-glx",
+        "libgl1-mesa-dri"
       ],
       "env": {
-        "DISPLAY": "${DISPLAY:-:0}",
-        "QT_X11_NO_MITSHM": "1"
-      },
-      "compose_volumes": [
-        "/tmp/.X11-unix:/tmp/.X11-unix:rw"
-      ],
-      "compose_env": {
-        "DISPLAY": "${DISPLAY:-:0}",
         "QT_X11_NO_MITSHM": "1"
       }
     },
+
     "zsh": {
       "label": "zsh",
       "description": "Zsh shell + Oh-My-Zsh framework",

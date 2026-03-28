@@ -26,7 +26,7 @@ function homeFor(username, isRoot) { return isRoot ? '/root' : `/home/${username
 function visiblePackageNames(packages) {
     return [...packages]
         .map(key => CFG.ros_packages[key] || {})
-        .map(pkg => pkg.label);
+        .map(pkg => pkg.label || key);
 }
 
 export function defaultUsername() { requireConfig(); return CFG.defaults.username; }
@@ -85,6 +85,42 @@ export function resolveRosPackageApt(pkgKey, distro) {
         names.push(...subAll(pkg.extra_apt_on_distros.apt, vars));
     }
     return names;
+}
+
+/**
+ * Resolve relationship rules, automatic selections, and OS-specific scaffolding.
+ */
+export function resolveConfig(config) {
+    requireConfig();
+    const res = { ...config };
+    const distro = res.distro;
+    const variant = res.variant;
+    const packages = new Set(res.packages || []);
+    const tools = new Set(res.tools || []);
+
+    // 1. Variant Implications
+    const vCfg = CFG.variants[variant] || {};
+    if (vCfg.implies_packages) {
+        for (let pKey of vCfg.implies_packages) {
+            if (pKey === 'gazebo_distro_specific') {
+                const dCfg = CFG.distros[distro] || {};
+                pKey = dCfg.gazebo_pkg || 'gz_sim';
+            }
+            packages.add(pKey);
+        }
+    }
+
+    // 2. GUI Dependencies
+    let hasGuiPkg = false;
+    for (const pKey of packages) {
+        const pCfg = CFG.ros_packages[pKey] || {};
+        if (pCfg.is_gui) { hasGuiPkg = true; break; }
+    }
+    if (hasGuiPkg) tools.add('x11');
+
+    res.packages = Array.from(packages);
+    res.tools = Array.from(tools);
+    return res;
 }
 
 /** Build Dockerfile content */
@@ -278,7 +314,8 @@ export function buildDockerfile(config) {
 /** Build docker-compose.yml content */
 export function buildCompose(config) {
     requireConfig();
-    const { distro, packages, tools, workspace, containerName, userType } = config;
+    const { distro, packages, tools, workspace, containerName, userType, hostOs } = config;
+    const currentHostOs = hostOs || config.host_os || 'linux';
     const isRoot = userType === 'root';
     const pkgsSet = new Set(packages);
     const toolsSet = new Set(tools);
@@ -303,20 +340,38 @@ export function buildCompose(config) {
     ln(`    network_mode: host`);
     ln(`    environment:`);
     ln(`      - ROS_DISTRO=${distro}`);
+
+    // ── Environment ─────────────────────────────────────────────
     for (const toolKey of toolsSet) {
         const tool = CFG.tools[toolKey];
         if (tool && tool.compose_env) Object.entries(tool.compose_env).forEach(([k, v]) => ln(`      - ${k}=${v}`));
     }
+    if (toolsSet.has('x11')) {
+        const osCfg = CFG.host_os[currentHostOs] || CFG.host_os.linux;
+        if (osCfg.x11_env) {
+            Object.entries(osCfg.x11_env).forEach(([k, v]) => ln(`      - ${k}=${v}`));
+        }
+    }
+
     for (const pkgKey of pkgsSet) {
         const pkg = CFG.ros_packages[pkgKey];
         if (pkg && pkg.env) Object.entries(pkg.env).forEach(([k, v]) => ln(`      - ${k}=${v}`));
     }
+
+    // ── Volumes ─────────────────────────────────────────────────
     ln(`    volumes:`);
     ln(`      - .:${workspace}:rw`);
     for (const toolKey of toolsSet) {
         const tool = CFG.tools[toolKey];
         if (tool && tool.compose_volumes) tool.compose_volumes.forEach(v => ln(`      - ${v}`));
     }
+    if (toolsSet.has('x11')) {
+        const osCfg = CFG.host_os[currentHostOs] || CFG.host_os.linux;
+        if (osCfg.x11_volumes) {
+            osCfg.x11_volumes.forEach(v => ln(`      - ${v}`));
+        }
+    }
+
     if (hasCuda) {
         ln(`    deploy:`);
         ln(`      resources:`);
@@ -337,7 +392,7 @@ export function buildReadme(config) {
     const u = userType === 'root' ? 'root' : username;
     const d = CFG.distros[distro];
     const pkgsStr = visiblePackageNames(pkgsSet).join(', ') || 'none';
-    const toolsStr = [...tools].map(t => (CFG.tools[t] || {}).label || t).join(', ');
+    const toolsStr = [...tools].map(t => (CFG.tools[t] || t).label || t).join(', ');
     const gpuNote = (pkgsSet.has('cuda') || pkgsSet.has('tensorrt')) ? `
 ## GPU Requirements
 - CUDA / TensorRT selections assume you intend to run on an NVIDIA-capable host
@@ -413,12 +468,20 @@ export function getToolChoices() {
     }));
 }
 
+export function getHostOsChoices() {
+    requireConfig();
+    return Object.entries(CFG.host_os).map(([key, o]) => ({
+        value: key, label: o.label, description: o.description,
+    }));
+}
+
 // ── Browser Compatibility Layer ────────────────────────────────────────
 
 if (typeof window !== 'undefined') {
     window.ROS2_DOCKER_GEN_CORE = {
         init, getBaseImage, buildDockerfile, buildCompose, buildReadme,
-        getDistros, getVariants, getRosPackageChoices, getToolChoices,
-        defaultUsername, defaultUid, defaultUserType, defaultWorkspace, defaultContainerName
+        getDistros, getVariants, getRosPackageChoices, getToolChoices, getHostOsChoices,
+        defaultUsername, defaultUid, defaultUserType, defaultWorkspace, defaultContainerName,
+        resolveConfig
     };
 }

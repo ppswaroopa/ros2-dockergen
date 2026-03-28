@@ -1207,6 +1207,18 @@
                 </div>
             </div>
 
+            <div class="divider-label">Host Operating System</div>
+            <div class="info-box">
+                <div class="info-box-icon">🖥️</div>
+                <div class="info-box-text">Selecting your <strong>Host OS</strong> ensures the generated
+                    docker-compose file has the correct volumes and environment variables for <strong>GUI/X11
+                        forwarding</strong> (e.g., WSLg for Windows 11).
+                </div>
+            </div>
+            <div class="radio-grid" id="host-os-grid">
+                <!-- Dynamically populated -->
+            </div>
+
             <div class="divider-label">Base Image Variant</div>
             <div class="info-box">
                 <div class="info-box-icon">💡</div>
@@ -1945,6 +1957,7 @@
         const state = {
             distro: 'humble',
             variant: 'ros-base',
+            hostOs: 'linux',
             packages: new Set(),
             tools: new Set(),
             userType: 'user',
@@ -1955,6 +1968,46 @@
             currentStep: 1,
             currentTab: 'tab-dockerfile'
         };
+
+        // ============================================================
+        // OS DETECTION
+        // ============================================================
+        async function detectHostOs() {
+            if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+                try {
+                    const values = await navigator.userAgentData.getHighEntropyValues(['platformVersion']);
+                    if (navigator.userAgentData.platform === 'Windows') {
+                        const major = parseInt(values.platformVersion.split('.')[0]);
+                        if (major >= 13) return 'windows-11';
+                        return 'windows-10';
+                    }
+                } catch (e) {}
+            }
+            const ua = navigator.userAgent;
+            if (ua.includes('Linux')) return 'linux';
+            if (ua.includes('Windows NT 10.0')) return 'windows-11'; // Heuristic
+            return 'linux';
+        }
+
+        function renderHostOsChoices() {
+            const grid = document.getElementById('host-os-grid');
+            if (!grid) return;
+            const choices = ROS2_DOCKER_GEN_CORE.getHostOsChoices();
+            grid.innerHTML = choices.map(c => `
+                <div class="radio-card ${state.hostOs === c.value ? 'selected' : ''}" data-host-os="${c.value}" onclick="selectHostOs(this)">
+                    <div class="radio-dot"></div>
+                    <div class="option-name">${c.label}</div>
+                    <div class="option-desc">${c.description}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectHostOs(el) {
+            document.querySelectorAll('#host-os-grid .radio-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            state.hostOs = el.dataset.hostOs;
+            generateFiles();
+        }
 
         // ============================================================
         // STEP NAVIGATION
@@ -2126,6 +2179,25 @@
         // ============================================================
         // FILE GENERATION
         // ============================================================
+        function syncUIWithResolved(resolved) {
+            // Sync Sets back to state so subsequent calls are consistent
+            state.packages = new Set(resolved.packages);
+            state.tools = new Set(resolved.tools);
+
+            // Packages
+            document.querySelectorAll('.option-card[data-pkg]').forEach(el => {
+                const pkg = el.dataset.pkg;
+                if (resolved.packages.includes(pkg)) el.classList.add('selected');
+                else el.classList.remove('selected');
+            });
+            // Tools
+            document.querySelectorAll('.toggle-row[data-tool]').forEach(el => {
+                const tool = el.dataset.tool;
+                if (resolved.tools.includes(tool)) el.classList.add('on');
+                else el.classList.remove('on');
+            });
+        }
+
         function generateFiles() {
             // Sync state with inputs
             state.username = document.getElementById('username')?.value || 'ros-dev';
@@ -2133,10 +2205,18 @@
             state.workspace = document.getElementById('workspace')?.value || (state.userType === 'root' ? '/root/ros2_ws' : `/home/${state.username}/ros2_ws`);
             state.containerName = document.getElementById('container-name')?.value || `ros2-${state.distro}`;
 
-            // Use the UNIFIED core generator
-            const df = ROS2_DOCKER_GEN_CORE.buildDockerfile(state);
-            const cp = ROS2_DOCKER_GEN_CORE.buildCompose(state);
-            const rm = ROS2_DOCKER_GEN_CORE.buildReadme(state);
+            const rawConfig = {
+                ...state,
+                packages: Array.from(state.packages),
+                tools: Array.from(state.tools)
+            };
+
+            const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
+            syncUIWithResolved(resolved);
+
+            const df = ROS2_DOCKER_GEN_CORE.buildDockerfile(resolved);
+            const cp = ROS2_DOCKER_GEN_CORE.buildCompose(resolved);
+            const rm = ROS2_DOCKER_GEN_CORE.buildReadme(resolved);
 
             const dfEl = document.getElementById('dockerfile-out');
             const cpEl = document.getElementById('compose-out');
@@ -2153,9 +2233,21 @@
             });
         }
 
-        function buildDockerfile() { return ROS2_DOCKER_GEN_CORE.buildDockerfile(state); }
-        function buildCompose() { return ROS2_DOCKER_GEN_CORE.buildCompose(state); }
-        function buildReadme() { return ROS2_DOCKER_GEN_CORE.buildReadme(state); }
+        function buildDockerfile() { 
+            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
+            return ROS2_DOCKER_GEN_CORE.buildDockerfile(resolved); 
+        }
+        function buildCompose() { 
+            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
+            return ROS2_DOCKER_GEN_CORE.buildCompose(resolved); 
+        }
+        function buildReadme() { 
+            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
+            return ROS2_DOCKER_GEN_CORE.buildReadme(resolved); 
+        }
 
         // ============================================================
         // SUMMARY
@@ -2166,12 +2258,17 @@
             const pills = [];
             pills.push({ label: `ROS2 ${state.distro}`, cls: 'cyan', step: 1 });
             pills.push({ label: state.variant, cls: '', step: 1 });
-            if (state.packages.size) pills.push({ label: `${state.packages.size} packages`, cls: 'green', step: 2 });
-            if (state.tools.size) pills.push({ label: `${state.tools.size} dev tools`, cls: '', step: 3 });
+            pills.push({ label: `Host: ${state.hostOs}`, cls: '', step: 1 });
+            
+            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
+
+            if (resolved.packages.length) pills.push({ label: `${resolved.packages.length} packages`, cls: 'green', step: 2 });
+            if (resolved.tools.length) pills.push({ label: `${resolved.tools.length} dev tools`, cls: '', step: 3 });
             if (state.userType !== 'root') pills.push({ label: `user: ${state.username}`, cls: 'green', step: 4 });
             else pills.push({ label: 'root user', cls: 'orange', step: 4 });
-            if (state.packages.has('cuda')) pills.push({ label: 'NVIDIA GPU', cls: 'orange', step: 2 });
-            if (state.tools.has('x11')) pills.push({ label: 'X11 GUI', cls: '', step: 3 });
+            if (resolved.packages.includes('cuda')) pills.push({ label: 'NVIDIA GPU', cls: 'orange', step: 2 });
+            if (resolved.tools.includes('x11')) pills.push({ label: 'X11 GUI', cls: '', step: 3 });
 
             el.innerHTML = pills.map(p => `<span class="pill ${p.cls}" onclick="showStep(${p.step}, true)">${p.label}</span>`).join('');
         }
@@ -2264,6 +2361,10 @@
 
                 // 3. Initialize and sync defaults from shared config
                 core.init(config);
+
+                const detectedOs = await detectHostOs();
+                state.hostOs = detectedOs;
+                renderHostOsChoices();
 
                 const defaults = config.defaults || {};
                 const defaultTools = (core.getToolChoices?.() || []).filter(tool => tool.default).map(tool => tool.value);
