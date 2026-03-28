@@ -36,6 +36,14 @@ else
     exit 1
 fi
 
+info "Running Web Bundle Tests..."
+if PYTHONPATH=src python3 tests/test_web_bundle.py; then
+    success "Web bundle tests passed."
+else
+    error "Web bundle tests failed!"
+    exit 1
+fi
+
 # ── 2. Generator Smoke Tests ─────────────────────────────────
 info "Running Generator Smoke Tests..."
 SMOKE_DIR="/tmp/ros2-gen-smoke"

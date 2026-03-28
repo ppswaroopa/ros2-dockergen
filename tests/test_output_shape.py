@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import copy
 import json
 import sys
 from pathlib import Path
@@ -55,12 +56,17 @@ def main():
     readme = core.build_readme(dev_cfg)
     root_readme = core.build_readme(root_cfg)
 
+    if core.default_container_name("jazzy") != "ros2-jazzy":
+        raise AssertionError("default container name should resolve to ros2-jazzy")
+
     assert_contains(compose, "      - .:/home/ros-dev/ros2_ws:rw", "compose")
     assert_not_contains(compose, "./ros2_ws:", "compose")
 
     assert_contains(dockerfile, 'RUN echo "source /opt/ros/jazzy/setup.bash" >> /home/ros-dev/.bashrc', "dockerfile")
     assert_contains(dockerfile, 'RUN echo "source /opt/ros/jazzy/setup.bash" >> /home/ros-dev/.zshrc', "dockerfile")
     assert_contains(dockerfile, 'RUN export HOME=/home/ros-dev && sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended', "dockerfile")
+    assert_contains(dockerfile, "    tensorrt \\", "dockerfile")
+    assert_contains(dockerfile, "    python3-libnvinfer \\", "dockerfile")
     assert_contains(dockerfile, "ENV NVIDIA_VISIBLE_DEVICES=all", "dockerfile")
     assert_contains(dockerfile, "ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics", "dockerfile")
 
@@ -71,9 +77,18 @@ def main():
 
     assert_contains(readme, "This setup mounts the current directory into `/home/ros-dev/ros2_ws`", "readme")
     assert_contains(readme, "## GPU Requirements", "readme")
-    assert_contains(readme, "| **Packages** | CUDA, cv_bridge, CycloneDDS |", "readme package summary")
-    assert_not_contains(readme.split("## Prerequisites", 1)[0], "TensorRT", "readme package summary")
+    assert_contains(readme, "| **Packages** | CUDA, cv_bridge, CycloneDDS, TensorRT |", "readme package summary")
     assert_contains(root_readme, "| **User** | root |", "root readme")
+
+    bad_cfg = copy.deepcopy(cfg)
+    del bad_cfg["ros_packages"]["tensorrt"]["apt_by_distros"]["jazzy"]
+    bad_core = GeneratorCore(bad_cfg)
+    try:
+        bad_core.build_dockerfile(dev_cfg)
+    except ValueError as exc:
+        assert_contains(str(exc), "tensorrt", "unsupported TensorRT error")
+    else:
+        raise AssertionError("expected unsupported TensorRT distro to raise ValueError")
 
     print("Output shape tests passed.")
 

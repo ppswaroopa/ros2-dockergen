@@ -29,10 +29,24 @@ class GeneratorCore:
         names = []
         for pkg_key in packages:
             pkg = self._cfg["ros_packages"].get(pkg_key, {})
-            if pkg.get("readme_only") and not pkg.get("apt"):
-                continue
             names.append(pkg.get("label", pkg_key))
         return names
+
+    def default_username(self):
+        return self._cfg["defaults"]["username"]
+
+    def default_uid(self):
+        return self._cfg["defaults"]["uid"]
+
+    def default_user_type(self):
+        return self._cfg["defaults"]["user_type"]
+
+    def default_workspace(self, username, user_type):
+        template = self._cfg["defaults"]["root_workspace"] if user_type == "root" else self._cfg["defaults"]["user_workspace"]
+        return self._sub(template, {"username": username})
+
+    def default_container_name(self, distro):
+        return self._sub(self._cfg["defaults"]["container_name"], {"distro": distro})
 
     def get_base_image(self, distro, variant, has_cuda):
         d = self._cfg["distros"].get(distro)
@@ -53,13 +67,23 @@ class GeneratorCore:
 
     def resolve_ros_package_apt(self, pkg_key, distro):
         pkg = self._cfg["ros_packages"].get(pkg_key)
-        if not pkg or pkg.get("switches_base_image"):
+        if not pkg:
             return []
-            
+
+        variables = {"distro": distro}
+
+        if pkg.get("apt_by_distros"):
+            apt_by_distro = pkg["apt_by_distros"]
+            if distro not in apt_by_distro:
+                raise ValueError(f"Package {pkg_key} is not supported on distro {distro}")
+            return self._sub_all(apt_by_distro[distro], variables)
+
+        if pkg.get("switches_base_image"):
+            return []
+
         if "skip_on_distros" in pkg and distro in pkg["skip_on_distros"]:
             return []
-            
-        variables = {"distro": distro}
+
         names = self._sub_all(pkg.get("apt", []), variables)
         
         extra = pkg.get("extra_apt_on_distros")

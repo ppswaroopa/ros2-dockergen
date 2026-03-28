@@ -95,12 +95,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: Run Version Check
         run: |
           PYTHONPATH=src python3 tests/test_version.py
       - name: Run Output Shape Tests
         run: |
           PYTHONPATH=src python3 tests/test_output_shape.py
+      - name: Run Web Bundle Tests
+        run: |
+          PYTHONPATH=src python3 tests/test_web_bundle.py
 
   # ── Python Build Verification ─────────────────────────────────
   build-check:

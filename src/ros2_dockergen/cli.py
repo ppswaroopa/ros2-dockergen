@@ -423,20 +423,20 @@ def _wizard() -> None:
         ],
     )
 
-    username = "ros-dev"
-    uid      = 1000
+    username = _CORE.default_username()
+    uid      = _CORE.default_uid()
     if user_type == "user":
         username = _input_line(
             "Username inside the container",
             "Creates a Linux user account with this name.",
-            "ros-dev",
+            _CORE.default_username(),
             lambda v: (True if re.match(r"^[a-z_][a-z0-9_-]{0,30}$", v)
                        else "Lowercase letters, digits, _ or - (max 31 chars)"),
         )
         raw_uid = _input_line(
             "UID for the user",
             "Match your host UID to avoid file permission issues (run `id -u`).",
-            "1000",
+            str(_CORE.default_uid()),
             lambda v: True if v.isdigit() else "Must be a positive integer",
         )
         uid = int(raw_uid)
@@ -447,7 +447,7 @@ def _wizard() -> None:
     )
     _draw_panel(6)
 
-    default_ws = "/root/ros2_ws" if user_type == "root" else f"/home/{username}/ros2_ws"
+    default_ws = _CORE.default_workspace(username, user_type)
     workspace = _input_line(
         "Workspace path inside the container",
         "Absolute path — this will be mounted from your host.",
@@ -460,7 +460,7 @@ def _wizard() -> None:
     container_name = _input_line(
         "Container / service name",
         "Used as the docker-compose service name and container hostname.",
-        f"ros2-{distro}",
+        _CORE.default_container_name(distro),
         lambda v: (True if re.match(r"^[a-z0-9][a-z0-9_-]*$", v)
                    else "Lowercase letters, digits, _ or - (must start with letter/digit)"),
     )

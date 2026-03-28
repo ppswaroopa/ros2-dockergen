@@ -1,6 +1,14 @@
 {
   "_comment": "ros2-dockergen shared configuration — consumed by both core.js (web) and core.py (CLI). Do not encode logic in either consumer; encode it here as rules.",
   "version": "1.1.0",
+  "defaults": {
+    "username": "ros-dev",
+    "uid": 1000,
+    "user_type": "user",
+    "container_name": "ros2-{distro}",
+    "root_workspace": "/root/ros2_ws",
+    "user_workspace": "/home/{username}/ros2_ws"
+  },
   "distros": {
     "jazzy": {
       "label": "Jazzy",
@@ -191,11 +199,23 @@
     },
     "tensorrt": {
       "label": "TensorRT",
-      "description": "NVIDIA TensorRT inference engine — implies CUDA base image",
-      "apt": [],
+      "description": "NVIDIA TensorRT inference engine",
+      "apt_by_distros": {
+        "humble": [
+          "tensorrt",
+          "python3-libnvinfer"
+        ],
+        "jazzy": [
+          "tensorrt",
+          "python3-libnvinfer"
+        ],
+        "kilted": [
+          "tensorrt",
+          "python3-libnvinfer"
+        ]
+      },
       "switches_base_image": true,
-      "readme_only": true,
-      "_comment": "No apt packages; presence triggers nvidia/cuda base image substitution"
+      "_comment": "Requires the CUDA base image and installs TensorRT from the NVIDIA repo already present in the CUDA image"
     }
   },
   "tools": {

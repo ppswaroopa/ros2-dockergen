@@ -58,6 +58,23 @@ The interactive wizard will walk you through 8 steps to configure your environme
 ros2-dockergen --help    # Show help
 ros2-dockergen --version # Show version
 ```
+---
+
+## Local CI With `act`
+
+To reproduce the main GitHub Actions workflow locally, install [`act`](https://nektosact.com/installation/) and run:
+
+```bash
+./scripts/run_act.sh
+```
+
+By default this runs the CI jobs one-by-one so local Docker usage stays manageable and each job's output is easy to read.
+
+If you want the original full-workflow `act` behavior instead, run:
+
+```bash
+./scripts/run_act.sh full
+```
 
 ---
 

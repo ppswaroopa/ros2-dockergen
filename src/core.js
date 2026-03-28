@@ -26,8 +26,20 @@ function homeFor(username, isRoot) { return isRoot ? '/root' : `/home/${username
 function visiblePackageNames(packages) {
     return [...packages]
         .map(key => CFG.ros_packages[key] || {})
-        .filter(pkg => !(pkg.readme_only && (!pkg.apt || pkg.apt.length === 0)))
         .map(pkg => pkg.label);
+}
+
+export function defaultUsername() { requireConfig(); return CFG.defaults.username; }
+export function defaultUid() { requireConfig(); return CFG.defaults.uid; }
+export function defaultUserType() { requireConfig(); return CFG.defaults.user_type; }
+export function defaultWorkspace(username, userType) {
+    requireConfig();
+    const template = userType === 'root' ? CFG.defaults.root_workspace : CFG.defaults.user_workspace;
+    return sub(template, { username });
+}
+export function defaultContainerName(distro) {
+    requireConfig();
+    return sub(CFG.defaults.container_name, { distro });
 }
 
 // ── Exported Methods ───────────────────────────────────────────────────
@@ -58,7 +70,14 @@ export function getBaseImage(distro, variant, hasCuda) {
 export function resolveRosPackageApt(pkgKey, distro) {
     requireConfig();
     const pkg = CFG.ros_packages[pkgKey];
-    if (!pkg || pkg.switches_base_image) return [];
+    if (!pkg) return [];
+    if (pkg.apt_by_distros) {
+        if (!(distro in pkg.apt_by_distros)) {
+            throw new Error(`Package ${pkgKey} is not supported on distro ${distro}`);
+        }
+        return subAll(pkg.apt_by_distros[distro], { distro });
+    }
+    if (pkg.switches_base_image) return [];
     if (pkg.skip_on_distros && pkg.skip_on_distros.includes(distro)) return [];
     const vars = { distro };
     const names = subAll(pkg.apt, vars);
@@ -399,6 +418,7 @@ export function getToolChoices() {
 if (typeof window !== 'undefined') {
     window.ROS2_DOCKER_GEN_CORE = {
         init, getBaseImage, buildDockerfile, buildCompose, buildReadme,
-        getDistros, getVariants, getRosPackageChoices, getToolChoices
+        getDistros, getVariants, getRosPackageChoices, getToolChoices,
+        defaultUsername, defaultUid, defaultUserType, defaultWorkspace, defaultContainerName
     };
 }
