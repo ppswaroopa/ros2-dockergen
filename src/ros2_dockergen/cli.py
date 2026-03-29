@@ -331,7 +331,8 @@ def _distro_choices() -> list[dict]:
     result = []
     for d in _CORE.get_distros():
         rec   = "  (recommended)" if d["recommended"] else ""
-        label = f"{d['label'].ljust(8)} — Ubuntu {d['ubuntu']} LTS{rec}"
+        lts   = " LTS" if d["is_lts"] else ""
+        label = f"{d['label'].ljust(8)} — Ubuntu {d['ubuntu']}{lts}{rec}"
         result.append({"value": d["value"], "name": label})
     return result
 

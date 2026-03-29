@@ -469,7 +469,7 @@ This setup mounts the current directory into `{workspace}` so you can build exis
 """
 
     def get_distros(self):
-        return [{"value": k, "label": v["label"], "ubuntu": v["ubuntu"], "recommended": v.get("recommended", False)} 
+        return [{"value": k, "label": v["label"], "ubuntu": v["ubuntu"], "recommended": v.get("recommended", False), "is_lts": v.get("is_lts", False)} 
                 for k, v in self._cfg["distros"].items()]
 
     def get_variants(self):

@@ -10,15 +10,6 @@
     "user_workspace": "/home/{username}/ros2_ws"
   },
   "distros": {
-    "jazzy": {
-      "label": "Jazzy",
-      "ubuntu": "24.04",
-      "ubuntu_codename": "noble",
-      "ubuntu_image_suffix": "ubuntu24.04",
-      "cuda_version": "12.6.0",
-      "recommended": true,
-      "gazebo_pkg": "gz_sim"
-    },
     "humble": {
       "label": "Humble",
       "ubuntu": "22.04",
@@ -26,15 +17,27 @@
       "ubuntu_image_suffix": "ubuntu22.04",
       "cuda_version": "12.3.1",
       "recommended": false,
+      "is_lts": true,
       "gazebo_pkg": "gazebo"
     },
-    "kilted": {
-      "label": "Kilted",
+    "jazzy": {
+      "label": "Jazzy",
       "ubuntu": "24.04",
       "ubuntu_codename": "noble",
       "ubuntu_image_suffix": "ubuntu24.04",
       "cuda_version": "12.6.0",
+      "recommended": true,
+      "is_lts": true,
+      "gazebo_pkg": "gz_sim"
+    },
+    "kilted": {
+      "label": "Kilted",
+      "ubuntu": "24.10",
+      "ubuntu_codename": "oracular",
+      "ubuntu_image_suffix": "ubuntu24.10",
+      "cuda_version": "12.6.0",
       "recommended": false,
+      "is_lts": false,
       "gazebo_pkg": "gz_sim"
     }
   },
@@ -73,11 +76,6 @@
     }
   },
   "variants": {
-    "ros-core": {
-      "label": "ros-core",
-      "description": "Minimal — no GUI, just core ROS2 libraries",
-      "base_image": "ros:{distro}-ros-core"
-    },
     "ros-base": {
       "label": "ros-base",
       "description": "Core + basic CLI tools (rcl, rclcpp, common pkgs)",

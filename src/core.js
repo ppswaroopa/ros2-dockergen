@@ -443,7 +443,7 @@ This setup mounts the current directory into \`${workspace}\` so you can build e
 export function getDistros() {
     requireConfig();
     return Object.entries(CFG.distros).map(([key, d]) => ({
-        value: key, label: d.label, ubuntu: d.ubuntu, recommended: d.recommended,
+        value: key, label: d.label, ubuntu: d.ubuntu, recommended: d.recommended, is_lts: d.is_lts,
     }));
 }
 
