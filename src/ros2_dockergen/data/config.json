@@ -46,7 +46,8 @@
       "label": "Linux",
       "description": "Native X11 / Wayland support",
       "x11_volumes": [
-        "/tmp/.X11-unix:/tmp/.X11-unix:rw"
+        "/tmp/.X11-unix:/tmp/.X11-unix:rw",
+        "/dev/dri:/dev/dri"
       ],
       "x11_env": {
         "DISPLAY": "${DISPLAY:-:0}"
@@ -375,7 +376,9 @@
         "x11-apps",
         "libx11-dev",
         "mesa-utils",
-        "libgl1-mesa-glx",
+        "libgl1",
+        "libglvnd-dev",
+        "libegl1",
         "libgl1-mesa-dri"
       ],
       "env": {

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Modern NVIDIA Container Support**: Support for `runtime: nvidia` in generated `docker-compose.yml` and the `__GLX_VENDOR_LIBRARY_NAME=nvidia` environment variable to ensure correct GPU offloading and OpenGL vendor selection.
+- **Enhanced Hybrid GPU Support**: Native support for Intel/NVIDIA hybrid laptops via mandatory `/dev/dri` volume mounts for Linux hosts and explicit installation of `libgl1`, `libglvnd-dev`, and `libegl1` for vendor-neutral GL dispatch.
 - **Intelligent Choice Relationships**: Variant selections like `desktop-full` now automatically imply required packages (`rviz2`, `gazebo`/`gz_sim`), and GUI packages automatically enable `x11` display forwarding.
 - **Host OS Awareness**: New "Host OS" selection (auto-detected in CLI and Web) provides tailored Docker Compose scaffolding for Linux, Windows 11 (WSLg), and Windows 10 (X11).
 - **Core Engine Upgrades**: New `resolve_config()` method in both Python and JS core modules to handle automatic dependency resolution and OS-specific scaffolding.
@@ -18,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A lightweight zip bundler for the web UI and a local `scripts/run_act.sh` helper for reproducible sequential `act` runs without introducing third-party JS dependencies.
 
 ### Changed
+- Modernized GPU acceleration logic in `docker-compose.yml` to prefer the `runtime: nvidia` directive over the legacy `deploy: resources` block for broader compatibility outside of Swarm.
+- Updated generated README with specific troubleshooting guidance and caveats for users on hybrid GPU laptop hardware (e.g., `prime-select nvidia` hints).
 - Generated `docker-compose.yml` now mounts the current directory into the configured ROS workspace by default instead of creating a nested `./ros2_ws` bind mount.
 - Generated Dockerfiles now install Oh My Zsh in the selected user's home after switching to that user, while keeping Zsh as a normal optional tool selection.
 - Generated shell bootstrap now writes ROS/environment setup into `.bashrc` when `bashrc` is selected and into `.zshrc` when `zsh` is selected.

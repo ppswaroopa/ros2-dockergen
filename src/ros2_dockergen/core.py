@@ -373,6 +373,9 @@ class GeneratorCore:
             if "x11_env" in os_cfg:
                 for k, v in os_cfg["x11_env"].items():
                     ln(f"      - {k}={v}")
+        
+        if has_cuda:
+            ln("      - __GLX_VENDOR_LIBRARY_NAME=nvidia")
 
         for pkg_key in packages:
             pkg = self._cfg["ros_packages"].get(pkg_key)
@@ -396,13 +399,7 @@ class GeneratorCore:
                     ln(f"      - {v}")
                     
         if has_cuda:
-            ln("    deploy:")
-            ln("      resources:")
-            ln("        reservations:")
-            ln("          devices:")
-            ln("            - driver: nvidia")
-            ln("              count: all")
-            ln("              capabilities: [gpu, compute, utility]")
+            ln("    runtime: nvidia")
             
         return "\n".join(L)
 
@@ -428,6 +425,7 @@ class GeneratorCore:
 ## GPU Requirements
 - CUDA / TensorRT selections assume you intend to run on an NVIDIA-capable host
 - The host must already have working NVIDIA drivers and NVIDIA Container Toolkit/runtime configured
+- **Hybrid GPUs (Laptop):** On some laptops, OpenGL may fall back to CPU rendering. If RViz or Gazebo are slow, ensure the host is using NVIDIA as the primary GPU (e.g., `sudo prime-select nvidia`) or configure PRIME offloading.
 - If the host NVIDIA stack is not ready, `docker compose up -d` may fail before the container starts
 
 """

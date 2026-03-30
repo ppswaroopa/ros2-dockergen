@@ -153,8 +153,8 @@ export function buildDockerfile(config) {
         CFG.cuda_ros_install_apt.forEach(p => ln(`    ${p} \\`));
         ln(`    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \\`);
         ln(`    -o /usr/share/keyrings/ros-archive-keyring.gpg && \\`);
-        ln(`    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \\`);
-        ln(`    http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" \\`);
+        ln(`    echo "deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \\`);
+        ln(`    http://packages.ros.org/ros2/ubuntu \$(lsb_release -cs) main" \\`);
         ln(`    > /etc/apt/sources.list.d/ros2.list && \\`);
         ln(`    apt-get update && apt-get install -y ros-${distro}-${variant} && \\`);
         ln(`    rm -rf /var/lib/apt/lists/*`);
@@ -353,6 +353,10 @@ export function buildCompose(config) {
         }
     }
 
+    if (hasCuda) {
+        ln(`      - __GLX_VENDOR_LIBRARY_NAME=nvidia`);
+    }
+
     for (const pkgKey of pkgsSet) {
         const pkg = CFG.ros_packages[pkgKey];
         if (pkg && pkg.env) Object.entries(pkg.env).forEach(([k, v]) => ln(`      - ${k}=${v}`));
@@ -373,13 +377,7 @@ export function buildCompose(config) {
     }
 
     if (hasCuda) {
-        ln(`    deploy:`);
-        ln(`      resources:`);
-        ln(`        reservations:`);
-        ln(`          devices:`);
-        ln(`            - driver: nvidia`);
-            ln(`              count: all`);
-            ln(`              capabilities: [gpu, compute, utility]`);
+        ln(`    runtime: nvidia`);
     }
     return L.join('\n');
 }
@@ -397,6 +395,7 @@ export function buildReadme(config) {
 ## GPU Requirements
 - CUDA / TensorRT selections assume you intend to run on an NVIDIA-capable host
 - The host must already have working NVIDIA drivers and NVIDIA Container Toolkit/runtime configured
+- **Hybrid GPUs (Laptop):** On some laptops, OpenGL may fall back to CPU rendering. If RViz or Gazebo are slow, ensure the host is using NVIDIA as the primary GPU (e.g., \`sudo prime-select nvidia\`) or configure PRIME offloading.
 - If the host NVIDIA stack is not ready, \`docker compose up -d\` may fail before the container starts
 
 ` : '';
