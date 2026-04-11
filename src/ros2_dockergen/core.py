@@ -22,6 +22,41 @@ class GeneratorCore:
     def _sub_all(self, arr, variables):
         return [self._sub(s, variables) for s in arr]
 
+    def _resolve_env_map(self, env_map, variables):
+        return {
+            key: self._sub(value, variables) if isinstance(value, str) else value
+            for key, value in env_map.items()
+        }
+
+    def _shell_quote(self, value):
+        return "'" + value.replace("'", "'\"'\"'") + "'"
+
+    def _home_for(self, username, is_root):
+        return "/root" if is_root else f"/home/{username}"
+
+    def _visible_package_names(self, packages):
+        names = []
+        for pkg_key in packages:
+            pkg = self._cfg["ros_packages"].get(pkg_key, {})
+            names.append(pkg.get("label", pkg_key))
+        return names
+
+    def default_username(self):
+        return self._cfg["defaults"]["username"]
+
+    def default_uid(self):
+        return self._cfg["defaults"]["uid"]
+
+    def default_user_type(self):
+        return self._cfg["defaults"]["user_type"]
+
+    def default_workspace(self, username, user_type):
+        template = self._cfg["defaults"]["root_workspace"] if user_type == "root" else self._cfg["defaults"]["user_workspace"]
+        return self._sub(template, {"username": username})
+
+    def default_container_name(self, distro):
+        return self._sub(self._cfg["defaults"]["container_name"], {"distro": distro})
+
     def get_base_image(self, distro, variant, has_cuda):
         d = self._cfg["distros"].get(distro)
         if not d:
@@ -41,13 +76,23 @@ class GeneratorCore:
 
     def resolve_ros_package_apt(self, pkg_key, distro):
         pkg = self._cfg["ros_packages"].get(pkg_key)
-        if not pkg or pkg.get("switches_base_image"):
+        if not pkg:
             return []
-            
+
+        variables = {"distro": distro}
+
+        if pkg.get("apt_by_distros"):
+            apt_by_distro = pkg["apt_by_distros"]
+            if distro not in apt_by_distro:
+                raise ValueError(f"Package {pkg_key} is not supported on distro {distro}")
+            return self._sub_all(apt_by_distro[distro], variables)
+
+        if pkg.get("switches_base_image"):
+            return []
+
         if "skip_on_distros" in pkg and distro in pkg["skip_on_distros"]:
             return []
-            
-        variables = {"distro": distro}
+
         names = self._sub_all(pkg.get("apt", []), variables)
         
         extra = pkg.get("extra_apt_on_distros")
@@ -55,6 +100,43 @@ class GeneratorCore:
             names.extend(self._sub_all(extra.get("apt", []), variables))
             
         return names
+
+    def resolve_config(self, config):
+        """
+        Takes a raw user configuration and applies relationship rules,
+        automatic selections, and OS-specific scaffolding.
+        Returns a NEW resolved configuration dictionary.
+        """
+        res = config.copy()
+        distro = res["distro"]
+        variant = res["variant"]
+        packages = set(res.get("packages", []))
+        tools = set(res.get("tools", []))
+        
+        # 1. Variant Implications
+        v_cfg = self._cfg["variants"].get(variant, {})
+        if "implies_packages" in v_cfg:
+            for p_key in v_cfg["implies_packages"]:
+                if p_key == "gazebo_distro_specific":
+                    # Resolve which gazebo to use for this distro
+                    d_cfg = self._cfg["distros"].get(distro, {})
+                    p_key = d_cfg.get("gazebo_pkg", "gz_sim")
+                packages.add(p_key)
+                
+        # 2. GUI Dependencies (if any selected package is a GUI package, enable x11)
+        has_gui_pkg = False
+        for p_key in packages:
+            p_cfg = self._cfg["ros_packages"].get(p_key, {})
+            if p_cfg.get("is_gui"):
+                has_gui_pkg = True
+                break
+        
+        if has_gui_pkg:
+            tools.add("x11")
+            
+        res["packages"] = list(packages)
+        res["tools"] = list(tools)
+        return res
 
     def build_dockerfile(self, config):
         distro = config["distro"]
@@ -161,7 +243,6 @@ class GeneratorCore:
         if "zsh" in tools:
             ln("# ── Zsh + Oh-My-Zsh ──────────────────────────────────────────")
             ln("RUN apt-get update && apt-get install -y zsh && rm -rf /var/lib/apt/lists/*")
-            ln(f"RUN {self._cfg['tools']['zsh']['post_install_run']}")
             gap()
             
         ros_apt = []
@@ -178,7 +259,7 @@ class GeneratorCore:
         for pkg_key in packages:
             pkg = self._cfg["ros_packages"].get(pkg_key)
             if pkg and pkg.get("env"):
-                for k, v in pkg["env"].items():
+                for k, v in self._resolve_env_map(pkg["env"], variables).items():
                     ln(f"ENV {k}={v}")
                 gap()
                 
@@ -191,6 +272,8 @@ class GeneratorCore:
             ln(f"EXPOSE {ssh['expose_port']}")
             gap()
             
+        home = self._home_for(username, is_root)
+
         if not is_root:
             ln("# ── Non-root user ────────────────────────────────────────────")
             ln(f"ARG UID={uid}")
@@ -212,22 +295,34 @@ class GeneratorCore:
             
         ln(f"WORKDIR {workspace}")
         gap()
+
+        if "zsh" in tools:
+            zsh_run = self._sub(self._cfg["tools"]["zsh"]["post_install_run"], {"home": home})
+            ln("RUN {}".format(zsh_run))
+            gap()
         
-        if "bashrc" in tools:
-            home = "/root" if is_root else f"/home/{username}"
+        if "bashrc" in tools or "zsh" in tools:
             ln("# ── Shell setup ───────────────────────────────────────────────")
-            ln(f"RUN echo \"source /opt/ros/{distro}/setup.bash\" >> {home}/.bashrc")
-            for pkg_key in packages:
-                pkg = self._cfg["ros_packages"].get(pkg_key)
-                if pkg and pkg.get("env"):
-                    for k, v in pkg["env"].items():
-                        ln(f"RUN echo \"export {k}={v}\" >> {home}/.bashrc")
+            if "bashrc" in tools:
+                ln(f"RUN echo \"source /opt/ros/{distro}/setup.bash\" >> {home}/.bashrc")
+                for pkg_key in packages:
+                    pkg = self._cfg["ros_packages"].get(pkg_key)
+                    if pkg and pkg.get("env"):
+                        for k, v in self._resolve_env_map(pkg["env"], variables).items():
+                            ln(f"RUN echo {self._shell_quote(f'export {k}={v}')} >> {home}/.bashrc")
+            if "zsh" in tools:
+                ln(f"RUN echo \"source /opt/ros/{distro}/setup.bash\" >> {home}/.zshrc")
+                for pkg_key in packages:
+                    pkg = self._cfg["ros_packages"].get(pkg_key)
+                    if pkg and pkg.get("env"):
+                        for k, v in self._resolve_env_map(pkg["env"], variables).items():
+                            ln(f"RUN echo {self._shell_quote(f'export {k}={v}')} >> {home}/.zshrc")
             gap()
             
         for tool_key in tools:
             tool = self._cfg["tools"].get(tool_key)
             if tool and tool.get("env"):
-                for k, v in tool["env"].items():
+                for k, v in self._resolve_env_map(tool["env"], variables).items():
                     ln(f"ENV {k}={v}")
                 gap()
                 
@@ -247,6 +342,7 @@ class GeneratorCore:
         workspace = config["workspace"]
         container_name = config.get("containerName", config.get("container_name"))
         user_type = config.get("userType", config.get("user_type"))
+        host_os = config.get("host_os", config.get("hostOs", "linux"))
         
         is_root = user_type == "root"
         has_cuda = "cuda" in packages or "tensorrt" in packages
@@ -274,46 +370,48 @@ class GeneratorCore:
         ln("    environment:")
         ln(f"      - ROS_DISTRO={distro}")
         
+        # ── Environment ─────────────────────────────────────────────
         for tool_key in tools:
             tool = self._cfg["tools"].get(tool_key)
             if tool and tool.get("compose_env"):
-                for k, v in tool["compose_env"].items():
+                for k, v in self._resolve_env_map(tool["compose_env"], {"distro": distro}).items():
                     ln(f"      - {k}={v}")
                     
+        if "x11" in tools:
+            os_cfg = self._cfg["host_os"].get(host_os, self._cfg["host_os"]["linux"])
+            if "x11_env" in os_cfg:
+                for k, v in os_cfg["x11_env"].items():
+                    ln(f"      - {k}={v}")
+        
+        if has_cuda:
+            ln("      - __GLX_VENDOR_LIBRARY_NAME=nvidia")
+
         for pkg_key in packages:
             pkg = self._cfg["ros_packages"].get(pkg_key)
             if pkg and pkg.get("env"):
-                for k, v in pkg["env"].items():
+                for k, v in self._resolve_env_map(pkg["env"], {"distro": distro}).items():
                     ln(f"      - {k}={v}")
                     
+        # ── Volumes ─────────────────────────────────────────────────
         ln("    volumes:")
-        ln(f"      - ./ros2_ws:{workspace}:rw")
+        ln(f"      - .:{workspace}:rw")
         for tool_key in tools:
             tool = self._cfg["tools"].get(tool_key)
             if tool and tool.get("compose_volumes"):
                 for v in tool["compose_volumes"]:
                     ln(f"      - {v}")
+
+        if "x11" in tools:
+            os_cfg = self._cfg["host_os"].get(host_os, self._cfg["host_os"]["linux"])
+            if "x11_volumes" in os_cfg:
+                for v in os_cfg["x11_volumes"]:
+                    ln(f"      - {v}")
                     
         if has_cuda:
-            ln("    deploy:")
-            ln("      resources:")
-            ln("        reservations:")
-            ln("          devices:")
-            ln("            - driver: nvidia")
-            ln("              count: all")
-            ln("              capabilities: [gpu, compute, utility]")
+            ln("    runtime: nvidia")
             
-        ports = []
-        for tool_key in tools:
-            tool = self._cfg["tools"].get(tool_key)
-            if tool and tool.get("compose_port"):
-                ports.append(tool["compose_port"])
-        if ports:
-            ln("    ports:")
-            for p in ports:
-                ln(f"      - \"{p}\"")
-                
         return "\n".join(L)
+
 
     def build_readme(self, config):
         distro = config["distro"]
@@ -328,6 +426,19 @@ class GeneratorCore:
         u = "root" if user_type == "root" else username
         d = self._cfg["distros"][distro]
         
+        package_names = self._visible_package_names(packages)
+        tool_labels = [self._cfg["tools"].get(tool, {}).get("label", tool) for tool in tools]
+        gpu_note = ""
+        if "cuda" in packages or "tensorrt" in packages:
+            gpu_note = """
+## GPU Requirements
+- CUDA / TensorRT selections assume you intend to run on an NVIDIA-capable host
+- The host must already have working NVIDIA drivers and NVIDIA Container Toolkit/runtime configured
+- **Hybrid GPUs (Laptop):** On some laptops, OpenGL may fall back to CPU rendering. If RViz or Gazebo are slow, ensure the host is using NVIDIA as the primary GPU (e.g., `sudo prime-select nvidia`) or configure PRIME offloading.
+- If the host NVIDIA stack is not ready, `docker compose up -d` may fail before the container starts
+
+"""
+
         return f"""# ROS2 {d['label']} Docker Environment
 
 Generated by **ros2-dockergen v{self._cfg['version']}**
@@ -336,8 +447,8 @@ Generated by **ros2-dockergen v{self._cfg['version']}**
 | | |
 |---|---|
 | **ROS2 Distro** | {distro} ({variant}) |
-| **Packages** | {", ".join(sorted(packages)) if packages else "none"} |
-| **Dev Tools** | {", ".join(sorted(tools))} |
+| **Packages** | {", ".join(package_names) if package_names else "none"} |
+| **Dev Tools** | {", ".join(tool_labels)} |
 | **User** | {u} |
 | **Workspace** | {workspace} |
 
@@ -345,7 +456,7 @@ Generated by **ros2-dockergen v{self._cfg['version']}**
 - Docker Engine ≥ 24 / Docker Desktop
 - docker compose v2
 
-## Quick Start
+{gpu_note}## Quick Start
 ```bash
 docker compose build
 docker compose up -d
@@ -358,12 +469,14 @@ source install/setup.bash
 docker compose down
 ```
 
+This setup mounts the current directory into `{workspace}` so you can build existing repo files in place.
+
 ---
 *Generated by ros2-dockergen v{self._cfg['version']}*
 """
 
     def get_distros(self):
-        return [{"value": k, "label": v["label"], "ubuntu": v["ubuntu"], "recommended": v.get("recommended", False)} 
+        return [{"value": k, "label": v["label"], "ubuntu": v["ubuntu"], "recommended": v.get("recommended", False), "is_lts": v.get("is_lts", False)} 
                 for k, v in self._cfg["distros"].items()]
 
     def get_variants(self):

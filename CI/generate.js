@@ -18,18 +18,24 @@ function getArg(name, fallback = '') {
 const distro = getArg('distro', 'humble');
 const variant = getArg('variant', 'ros-base');
 const pkgArg = getArg('packages', '');
-const toolArg = getArg('tools', 'colcon,rosdep,python3,git,bashrc,locale,sudo');
-const username = getArg('username', 'ros-dev');
-const uid = parseInt(getArg('uid', '1000'), 10);
 const outDir = getArg('out', './ci-output');
-const cname = getArg('container', 'ros2_dev');
-const userType = getArg('usertype', 'user'); // Changed from 'custom' to match core.js expected values: 'user' | 'root'
+const cname = getArg('container', '');
 
 // ── Load Config & Init Core ───────────────────────────────────
 const _ROOT = path.join(__dirname, '..');
 const configPath = path.join(_ROOT, 'src', 'ros2_dockergen', 'data', 'config.json');
 const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 CORE.init(configData);
+const defaults = configData.defaults;
+const defaultTools = Object.entries(configData.tools)
+  .filter(([, tool]) => tool.default)
+  .map(([key]) => key)
+  .join(',');
+const toolArg = getArg('tools', defaultTools);
+const rawUserType = getArg('usertype', defaults.user_type);
+const userType = rawUserType === 'custom' ? 'user' : rawUserType;
+const username = getArg('username', defaults.username);
+const uid = parseInt(getArg('uid', String(defaults.uid)), 10);
 
 const config = {
   distro,
@@ -39,8 +45,13 @@ const config = {
   username,
   uid,
   userType,
-  containerName: cname,
-  workspace: getArg('workspace', userType === 'root' ? '/root/ros2_ws' : `/home/${username}/ros2_ws`)
+  containerName: cname || CORE.defaultContainerName(distro),
+  workspace: getArg(
+    'workspace',
+    userType === 'root'
+      ? defaults.root_workspace
+      : defaults.user_workspace.replace('{username}', username)
+  )
 };
 
 // ── Validate inputs ───────────────────────────────────────────

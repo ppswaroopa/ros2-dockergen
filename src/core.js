@@ -22,6 +22,31 @@ function sub(str, vars) {
 }
 
 function subAll(arr, vars) { return arr.map(s => sub(s, vars)); }
+function resolveEnvMap(envMap, vars) {
+    return Object.fromEntries(
+        Object.entries(envMap).map(([key, value]) => [key, typeof value === 'string' ? sub(value, vars) : value])
+    );
+}
+function shellQuote(value) { return `'${value.replace(/'/g, `'\"'\"'`)}'`; }
+function homeFor(username, isRoot) { return isRoot ? '/root' : `/home/${username}`; }
+function visiblePackageNames(packages) {
+    return [...packages]
+        .map(key => CFG.ros_packages[key] || {})
+        .map(pkg => pkg.label || key);
+}
+
+export function defaultUsername() { requireConfig(); return CFG.defaults.username; }
+export function defaultUid() { requireConfig(); return CFG.defaults.uid; }
+export function defaultUserType() { requireConfig(); return CFG.defaults.user_type; }
+export function defaultWorkspace(username, userType) {
+    requireConfig();
+    const template = userType === 'root' ? CFG.defaults.root_workspace : CFG.defaults.user_workspace;
+    return sub(template, { username });
+}
+export function defaultContainerName(distro) {
+    requireConfig();
+    return sub(CFG.defaults.container_name, { distro });
+}
 
 // ── Exported Methods ───────────────────────────────────────────────────
 
@@ -51,7 +76,14 @@ export function getBaseImage(distro, variant, hasCuda) {
 export function resolveRosPackageApt(pkgKey, distro) {
     requireConfig();
     const pkg = CFG.ros_packages[pkgKey];
-    if (!pkg || pkg.switches_base_image) return [];
+    if (!pkg) return [];
+    if (pkg.apt_by_distros) {
+        if (!(distro in pkg.apt_by_distros)) {
+            throw new Error(`Package ${pkgKey} is not supported on distro ${distro}`);
+        }
+        return subAll(pkg.apt_by_distros[distro], { distro });
+    }
+    if (pkg.switches_base_image) return [];
     if (pkg.skip_on_distros && pkg.skip_on_distros.includes(distro)) return [];
     const vars = { distro };
     const names = subAll(pkg.apt, vars);
@@ -59,6 +91,42 @@ export function resolveRosPackageApt(pkgKey, distro) {
         names.push(...subAll(pkg.extra_apt_on_distros.apt, vars));
     }
     return names;
+}
+
+/**
+ * Resolve relationship rules, automatic selections, and OS-specific scaffolding.
+ */
+export function resolveConfig(config) {
+    requireConfig();
+    const res = { ...config };
+    const distro = res.distro;
+    const variant = res.variant;
+    const packages = new Set(res.packages || []);
+    const tools = new Set(res.tools || []);
+
+    // 1. Variant Implications
+    const vCfg = CFG.variants[variant] || {};
+    if (vCfg.implies_packages) {
+        for (let pKey of vCfg.implies_packages) {
+            if (pKey === 'gazebo_distro_specific') {
+                const dCfg = CFG.distros[distro] || {};
+                pKey = dCfg.gazebo_pkg || 'gz_sim';
+            }
+            packages.add(pKey);
+        }
+    }
+
+    // 2. GUI Dependencies
+    let hasGuiPkg = false;
+    for (const pKey of packages) {
+        const pCfg = CFG.ros_packages[pKey] || {};
+        if (pCfg.is_gui) { hasGuiPkg = true; break; }
+    }
+    if (hasGuiPkg) tools.add('x11');
+
+    res.packages = Array.from(packages);
+    res.tools = Array.from(tools);
+    return res;
 }
 
 /** Build Dockerfile content */
@@ -91,8 +159,8 @@ export function buildDockerfile(config) {
         CFG.cuda_ros_install_apt.forEach(p => ln(`    ${p} \\`));
         ln(`    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \\`);
         ln(`    -o /usr/share/keyrings/ros-archive-keyring.gpg && \\`);
-        ln(`    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \\`);
-        ln(`    http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" \\`);
+        ln(`    echo "deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \\`);
+        ln(`    http://packages.ros.org/ros2/ubuntu \$(lsb_release -cs) main" \\`);
         ln(`    > /etc/apt/sources.list.d/ros2.list && \\`);
         ln(`    apt-get update && apt-get install -y ros-${distro}-${variant} && \\`);
         ln(`    rm -rf /var/lib/apt/lists/*`);
@@ -150,7 +218,6 @@ export function buildDockerfile(config) {
     if (toolsSet.has('zsh')) {
         ln(`# ── Zsh + Oh-My-Zsh ──────────────────────────────────────────`);
         ln(`RUN apt-get update && apt-get install -y zsh && rm -rf /var/lib/apt/lists/*`);
-        ln(`RUN ${CFG.tools.zsh.post_install_run}`);
         gap();
     }
 
@@ -166,7 +233,10 @@ export function buildDockerfile(config) {
 
     for (const pkgKey of pkgsSet) {
         const pkg = CFG.ros_packages[pkgKey];
-        if (pkg && pkg.env) { Object.entries(pkg.env).forEach(([k, v]) => ln(`ENV ${k}=${v}`)); gap(); }
+        if (pkg && pkg.env) {
+            Object.entries(resolveEnvMap(pkg.env, vars)).forEach(([k, v]) => ln(`ENV ${k}=${v}`));
+            gap();
+        }
     }
 
     if (toolsSet.has('ssh')) {
@@ -178,6 +248,8 @@ export function buildDockerfile(config) {
         ln(`EXPOSE ${ssh.expose_port}`);
         gap();
     }
+
+    const home = homeFor(username, isRoot);
 
     if (!isRoot) {
         ln(`# ── Non-root user ────────────────────────────────────────────`);
@@ -200,16 +272,33 @@ export function buildDockerfile(config) {
     ln(`WORKDIR ${workspace}`);
     gap();
 
-    if (toolsSet.has('bashrc')) {
-        const home = isRoot ? '/root' : `/home/${username}`;
+    if (toolsSet.has('zsh')) {
+        ln(`RUN ${sub(CFG.tools.zsh.post_install_run, { home })}`);
+        gap();
+    }
+
+    if (toolsSet.has('bashrc') || toolsSet.has('zsh')) {
         ln(`# ── Shell setup ───────────────────────────────────────────────`);
-        ln(`RUN echo "source /opt/ros/${distro}/setup.bash" >> ${home}/.bashrc`);
-        for (const pkgKey of pkgsSet) {
-            const pkg = CFG.ros_packages[pkgKey];
-            if (pkg && pkg.env) {
-                Object.entries(pkg.env).forEach(([k, v]) =>
-                    ln(`RUN echo "export ${k}=${v}" >> ${home}/.bashrc`)
-                );
+        if (toolsSet.has('bashrc')) {
+            ln(`RUN echo "source /opt/ros/${distro}/setup.bash" >> ${home}/.bashrc`);
+            for (const pkgKey of pkgsSet) {
+                const pkg = CFG.ros_packages[pkgKey];
+                if (pkg && pkg.env) {
+                    Object.entries(resolveEnvMap(pkg.env, vars)).forEach(([k, v]) =>
+                        ln(`RUN echo ${shellQuote(`export ${k}=${v}`)} >> ${home}/.bashrc`)
+                    );
+                }
+            }
+        }
+        if (toolsSet.has('zsh')) {
+            ln(`RUN echo "source /opt/ros/${distro}/setup.bash" >> ${home}/.zshrc`);
+            for (const pkgKey of pkgsSet) {
+                const pkg = CFG.ros_packages[pkgKey];
+                if (pkg && pkg.env) {
+                    Object.entries(resolveEnvMap(pkg.env, vars)).forEach(([k, v]) =>
+                        ln(`RUN echo ${shellQuote(`export ${k}=${v}`)} >> ${home}/.zshrc`)
+                    );
+                }
             }
         }
         gap();
@@ -217,7 +306,10 @@ export function buildDockerfile(config) {
 
     for (const toolKey of toolsSet) {
         const tool = CFG.tools[toolKey];
-        if (tool && tool.env) { Object.entries(tool.env).forEach(([k, v]) => ln(`ENV ${k}=${v}`)); gap(); }
+        if (tool && tool.env) {
+            Object.entries(resolveEnvMap(tool.env, vars)).forEach(([k, v]) => ln(`ENV ${k}=${v}`));
+            gap();
+        }
     }
 
     if (hasCuda) {
@@ -234,7 +326,8 @@ export function buildDockerfile(config) {
 /** Build docker-compose.yml content */
 export function buildCompose(config) {
     requireConfig();
-    const { distro, packages, tools, workspace, containerName, userType } = config;
+    const { distro, packages, tools, workspace, containerName, userType, hostOs } = config;
+    const currentHostOs = hostOs || config.host_os || 'linux';
     const isRoot = userType === 'root';
     const pkgsSet = new Set(packages);
     const toolsSet = new Set(tools);
@@ -259,36 +352,49 @@ export function buildCompose(config) {
     ln(`    network_mode: host`);
     ln(`    environment:`);
     ln(`      - ROS_DISTRO=${distro}`);
+
+    // ── Environment ─────────────────────────────────────────────
     for (const toolKey of toolsSet) {
         const tool = CFG.tools[toolKey];
-        if (tool && tool.compose_env) Object.entries(tool.compose_env).forEach(([k, v]) => ln(`      - ${k}=${v}`));
+        if (tool && tool.compose_env) {
+            Object.entries(resolveEnvMap(tool.compose_env, { distro })).forEach(([k, v]) => ln(`      - ${k}=${v}`));
+        }
     }
+    if (toolsSet.has('x11')) {
+        const osCfg = CFG.host_os[currentHostOs] || CFG.host_os.linux;
+        if (osCfg.x11_env) {
+            Object.entries(osCfg.x11_env).forEach(([k, v]) => ln(`      - ${k}=${v}`));
+        }
+    }
+
+    if (hasCuda) {
+        ln(`      - __GLX_VENDOR_LIBRARY_NAME=nvidia`);
+    }
+
     for (const pkgKey of pkgsSet) {
         const pkg = CFG.ros_packages[pkgKey];
-        if (pkg && pkg.env) Object.entries(pkg.env).forEach(([k, v]) => ln(`      - ${k}=${v}`));
+        if (pkg && pkg.env) {
+            Object.entries(resolveEnvMap(pkg.env, { distro })).forEach(([k, v]) => ln(`      - ${k}=${v}`));
+        }
     }
+
+    // ── Volumes ─────────────────────────────────────────────────
     ln(`    volumes:`);
-    ln(`      - ./ros2_ws:${workspace}:rw`);
+    ln(`      - .:${workspace}:rw`);
     for (const toolKey of toolsSet) {
         const tool = CFG.tools[toolKey];
         if (tool && tool.compose_volumes) tool.compose_volumes.forEach(v => ln(`      - ${v}`));
     }
-    if (hasCuda) {
-        ln(`    deploy:`);
-        ln(`      resources:`);
-        ln(`        reservations:`);
-        ln(`          devices:`);
-        ln(`            - driver: nvidia`);
-            ln(`              count: all`);
-            ln(`              capabilities: [gpu, compute, utility]`);
+    if (toolsSet.has('x11')) {
+        const osCfg = CFG.host_os[currentHostOs] || CFG.host_os.linux;
+        if (osCfg.x11_volumes) {
+            osCfg.x11_volumes.forEach(v => ln(`      - ${v}`));
+        }
     }
-    const ports = [];
-    for (const toolKey of toolsSet) {
-        const tool = CFG.tools[toolKey];
-        if (tool && tool.compose_port) ports.push(tool.compose_port);
-    }
-    if (ports.length) { ln(`    ports:`); ports.forEach(p => ln(`      - "${p}"`)); }
 
+    if (hasCuda) {
+        ln(`    runtime: nvidia`);
+    }
     return L.join('\n');
 }
 
@@ -296,10 +402,19 @@ export function buildCompose(config) {
 export function buildReadme(config) {
     requireConfig();
     const { distro, variant, packages, tools, username, workspace, containerName, userType } = config;
+    const pkgsSet = new Set(packages);
     const u = userType === 'root' ? 'root' : username;
     const d = CFG.distros[distro];
-    const pkgsStr = [...packages].join(', ') || 'none';
-    const toolsStr = [...tools].join(', ');
+    const pkgsStr = visiblePackageNames(pkgsSet).join(', ') || 'none';
+    const toolsStr = [...tools].map(t => (CFG.tools[t] || t).label || t).join(', ');
+    const gpuNote = (pkgsSet.has('cuda') || pkgsSet.has('tensorrt')) ? `
+## GPU Requirements
+- CUDA / TensorRT selections assume you intend to run on an NVIDIA-capable host
+- The host must already have working NVIDIA drivers and NVIDIA Container Toolkit/runtime configured
+- **Hybrid GPUs (Laptop):** On some laptops, OpenGL may fall back to CPU rendering. If RViz or Gazebo are slow, ensure the host is using NVIDIA as the primary GPU (e.g., \`sudo prime-select nvidia\`) or configure PRIME offloading.
+- If the host NVIDIA stack is not ready, \`docker compose up -d\` may fail before the container starts
+
+` : '';
 
     return `# ROS2 ${d.label} Docker Environment
 
@@ -318,7 +433,7 @@ Generated by **ros2-dockergen v${CFG.version}**
 - Docker Engine ≥ 24 / Docker Desktop
 - docker compose v2
 
-## Quick Start
+${gpuNote}## Quick Start
 \`\`\`bash
 docker compose build
 docker compose up -d
@@ -331,6 +446,8 @@ source install/setup.bash
 docker compose down
 \`\`\`
 
+This setup mounts the current directory into \`${workspace}\` so you can build existing repo files in place.
+
 ---
 *Generated by ros2-dockergen v${CFG.version}*
 `;
@@ -341,7 +458,7 @@ docker compose down
 export function getDistros() {
     requireConfig();
     return Object.entries(CFG.distros).map(([key, d]) => ({
-        value: key, label: d.label, ubuntu: d.ubuntu, recommended: d.recommended,
+        value: key, label: d.label, ubuntu: d.ubuntu, recommended: d.recommended, is_lts: d.is_lts,
     }));
 }
 
@@ -366,11 +483,20 @@ export function getToolChoices() {
     }));
 }
 
+export function getHostOsChoices() {
+    requireConfig();
+    return Object.entries(CFG.host_os).map(([key, o]) => ({
+        value: key, label: o.label, description: o.description,
+    }));
+}
+
 // ── Browser Compatibility Layer ────────────────────────────────────────
 
 if (typeof window !== 'undefined') {
     window.ROS2_DOCKER_GEN_CORE = {
         init, getBaseImage, buildDockerfile, buildCompose, buildReadme,
-        getDistros, getVariants, getRosPackageChoices, getToolChoices
+        getDistros, getVariants, getRosPackageChoices, getToolChoices, getHostOsChoices,
+        defaultUsername, defaultUid, defaultUserType, defaultWorkspace, defaultContainerName,
+        resolveConfig
     };
 }

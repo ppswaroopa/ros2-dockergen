@@ -4,11 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROS2 Docker Generator v1.1.0 — Get Robotics Running Fast</title>
+    <title>ROS2 Docker Generator v1.2.0 — Get Robotics Running Fast</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap"
         rel="stylesheet">
     <script type="module" src="src/core.js"></script>
+    <script type="module" src="src/web_bundle.js"></script>
     <style>
         :root {
             --bg: #0a0d0f;
@@ -1091,10 +1092,10 @@
             <div class="nav-inner">
                 <div class="logo"><a href="index.html"
                         style="text-decoration: none; color: inherit;">ros2<span>/</span>docker<span>-</span>gen</a>
-                    <span class="app-version-text" style="color:var(--green)">v1.1.0</span>
+                    <span class="app-version-text" style="color:var(--green)">v1.2.0</span>
                 </div>
                 <div style="display: flex; gap: 20px; align-items: center;">
-                    <div class="nav-badge"><span class="app-version-text">v1.1.0</span> · Humble · Jazzy · Kilted</div>
+                    <div class="nav-badge"><span class="app-version-text">v1.2.0</span> · Humble · Jazzy · Kilted</div>
                     <a href="https://ppswaroopa.github.io" target="_blank"
                         style="color: var(--text-dim); text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 11px; border: 1px solid var(--border-bright); padding: 4px 10px; border-radius: 2px; transition: all 0.2s; display: flex; align-items: center; gap: 4px;"
                         onmouseover="this.style.color='var(--green)'; this.style.borderColor='var(--green)'"
@@ -1204,6 +1205,18 @@
                         style="background:rgba(0, 212, 255, 0.1);color:var(--cyan);border-color:rgba(0, 212, 255, 0.3);">
                         Latest</div>
                 </div>
+            </div>
+
+            <div class="divider-label">Host Operating System</div>
+            <div class="info-box">
+                <div class="info-box-icon">🖥️</div>
+                <div class="info-box-text">Selecting your <strong>Host OS</strong> ensures the generated
+                    docker-compose file has the correct volumes and environment variables for <strong>GUI/X11
+                        forwarding</strong> (e.g., WSLg for Windows 11).
+                </div>
+            </div>
+            <div class="radio-grid" id="host-os-grid">
+                <!-- Dynamically populated -->
             </div>
 
             <div class="divider-label">Base Image Variant</div>
@@ -1701,7 +1714,7 @@
 
             <div class="divider-label">User Type</div>
             <div class="radio-grid" id="usertype-grid">
-                <div class="radio-card selected" data-usertype="custom" onclick="selectUserType(this)">
+                <div class="radio-card selected" data-usertype="user" onclick="selectUserType(this)">
                     <div class="radio-dot"></div>
                     <div class="option-icon">👤</div>
                     <div class="option-name">Custom User</div>
@@ -1755,13 +1768,13 @@
                         <label class="form-label">Workspace Directory</label>
                         <input class="form-input" type="text" id="workspace" placeholder="/home/ros-dev/ros2_ws"
                             value="/home/ros-dev/ros2_ws" oninput="generateFiles()">
-                        <span class="form-hint">Where your ROS2 workspace will be created inside the
-                            container</span>
+                        <span class="form-hint">The generated compose file mounts the current directory
+                            here inside the container</span>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Container Name (Compose)</label>
-                        <input class="form-input" type="text" id="container-name" placeholder="ros2_dev"
-                            value="ros2_dev" oninput="generateFiles()">
+                        <input class="form-input" type="text" id="container-name" placeholder="ros2-humble"
+                            value="ros2-humble" oninput="generateFiles()">
                         <span class="form-hint">Used in docker-compose.yml as the service name</span>
                     </div>
                 </div>
@@ -1773,9 +1786,8 @@
                     <span class="toggle-icon">📜</span>
                     <div>
                         <div class="toggle-label">Auto-source ROS2 setup.bash</div>
-                        <div class="toggle-sub">Automatically source /opt/ros/$ROS_DISTRO/setup.bash in .bashrc
-                            on
-                            startup</div>
+                        <div class="toggle-sub">Automatically source /opt/ros/$ROS_DISTRO/setup.bash in
+                            your shell config; also writes .zshrc when zsh is selected</div>
                     </div>
                 </div>
                 <div class="toggle-switch"></div>
@@ -1901,7 +1913,7 @@
                             the
                             path you
                             configured.</div>
-                        <span id="qs-exec" class="qs-cmd">docker exec -it ros2_dev bash</span>
+                        <span id="qs-exec" class="qs-cmd">docker exec -it ros2-humble bash</span>
                     </div>
                     <div class="qs-step">
                         <div class="qs-num">06</div>
@@ -1926,7 +1938,7 @@
     <footer>
         <div class="container">
             <div class="footer-text">
-                ROS2 Docker Generator <span class="app-version-text">v1.1.0</span> · Built for the ROS2 community · Files generated entirely in your
+                ROS2 Docker Generator <span class="app-version-text">v1.2.0</span> · Built for the ROS2 community · Files generated entirely in your
                 browser —
                 nothing
                 sent to any server<br>
@@ -1945,16 +1957,57 @@
         const state = {
             distro: 'humble',
             variant: 'ros-base',
+            hostOs: 'linux',
             packages: new Set(),
-            tools: new Set(['colcon', 'rosdep', 'python3', 'git', 'x11', 'bashrc', 'locale', 'sudo']),
-            userType: 'custom',
+            tools: new Set(),
+            userType: 'user',
             username: 'ros-dev',
             uid: '1000',
             workspace: '/home/ros-dev/ros2_ws',
-            containerName: 'ros2_dev',
+            containerName: 'ros2-humble',
             currentStep: 1,
             currentTab: 'tab-dockerfile'
         };
+
+        // ============================================================
+        // OS DETECTION
+        // ============================================================
+        async function detectHostOs() {
+            if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+                try {
+                    const values = await navigator.userAgentData.getHighEntropyValues(['platformVersion']);
+                    if (navigator.userAgentData.platform === 'Windows') {
+                        const major = parseInt(values.platformVersion.split('.')[0]);
+                        if (major >= 13) return 'windows-11';
+                        return 'windows-10';
+                    }
+                } catch (e) {}
+            }
+            const ua = navigator.userAgent;
+            if (ua.includes('Linux')) return 'linux';
+            if (ua.includes('Windows NT 10.0')) return 'windows-11'; // Heuristic
+            return 'linux';
+        }
+
+        function renderHostOsChoices() {
+            const grid = document.getElementById('host-os-grid');
+            if (!grid) return;
+            const choices = ROS2_DOCKER_GEN_CORE.getHostOsChoices();
+            grid.innerHTML = choices.map(c => `
+                <div class="radio-card ${state.hostOs === c.value ? 'selected' : ''}" data-host-os="${c.value}" onclick="selectHostOs(this)">
+                    <div class="radio-dot"></div>
+                    <div class="option-name">${c.label}</div>
+                    <div class="option-desc">${c.description}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectHostOs(el) {
+            document.querySelectorAll('#host-os-grid .radio-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            state.hostOs = el.dataset.hostOs;
+            generateFiles();
+        }
 
         // ============================================================
         // STEP NAVIGATION
@@ -1996,9 +2049,14 @@
         // SELECTORS
         // ============================================================
         function selectDistro(el) {
+            const oldDistro = state.distro;
             document.querySelectorAll('#distro-grid .radio-card').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
             state.distro = el.dataset.distro;
+            const containerInput = document.getElementById('container-name');
+            if (containerInput && (containerInput.value === '' || containerInput.value === `ros2-${oldDistro}`)) {
+                containerInput.value = `ros2-${state.distro}`;
+            }
             generateFiles();
         }
 
@@ -2048,7 +2106,9 @@
         }
 
         function selectPopularTools() {
-            const popular = ['colcon', 'rosdep', 'python3', 'git', 'x11', 'bashrc', 'locale', 'sudo'];
+            const popular = (window.ROS2_DOCKER_GEN_CORE?.getToolChoices?.() || [])
+                .filter(tool => tool.default)
+                .map(tool => tool.value);
             document.querySelectorAll('.toggle-row[data-tool]').forEach(el => {
                 const tool = el.dataset.tool;
                 if (popular.includes(tool)) {
@@ -2081,7 +2141,7 @@
             if (ws) {
                 if (state.userType === 'root' && ws.value === `/home/${state.username}/ros2_ws`) {
                     ws.value = '/root/ros2_ws';
-                } else if (state.userType === 'custom' && ws.value === '/root/ros2_ws') {
+                } else if (state.userType === 'user' && ws.value === '/root/ros2_ws') {
                     ws.value = `/home/${state.username}/ros2_ws`;
                 }
             }
@@ -2097,6 +2157,10 @@
                 if (ws.value === oldExpected || ws.value === '') {
                     ws.value = `/home/${state.username}/ros2_ws`;
                 }
+            }
+            const containerInput = document.getElementById('container-name');
+            if (containerInput && (containerInput.value === '' || containerInput.value === `ros2-${state.distro}`)) {
+                containerInput.value = `ros2-${state.distro}`;
             }
             generateFiles();
         }
@@ -2115,17 +2179,44 @@
         // ============================================================
         // FILE GENERATION
         // ============================================================
+        function syncUIWithResolved(resolved) {
+            // Sync Sets back to state so subsequent calls are consistent
+            state.packages = new Set(resolved.packages);
+            state.tools = new Set(resolved.tools);
+
+            // Packages
+            document.querySelectorAll('.option-card[data-pkg]').forEach(el => {
+                const pkg = el.dataset.pkg;
+                if (resolved.packages.includes(pkg)) el.classList.add('selected');
+                else el.classList.remove('selected');
+            });
+            // Tools
+            document.querySelectorAll('.toggle-row[data-tool]').forEach(el => {
+                const tool = el.dataset.tool;
+                if (resolved.tools.includes(tool)) el.classList.add('on');
+                else el.classList.remove('on');
+            });
+        }
+
         function generateFiles() {
             // Sync state with inputs
             state.username = document.getElementById('username')?.value || 'ros-dev';
             state.uid = document.getElementById('user-uid')?.value || '1000';
             state.workspace = document.getElementById('workspace')?.value || (state.userType === 'root' ? '/root/ros2_ws' : `/home/${state.username}/ros2_ws`);
-            state.containerName = document.getElementById('container-name')?.value || 'ros2_dev';
+            state.containerName = document.getElementById('container-name')?.value || `ros2-${state.distro}`;
 
-            // Use the UNIFIED core generator
-            const df = ROS2_DOCKER_GEN_CORE.buildDockerfile(state);
-            const cp = ROS2_DOCKER_GEN_CORE.buildCompose(state);
-            const rm = ROS2_DOCKER_GEN_CORE.buildReadme(state);
+            const rawConfig = {
+                ...state,
+                packages: Array.from(state.packages),
+                tools: Array.from(state.tools)
+            };
+
+            const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
+            syncUIWithResolved(resolved);
+
+            const df = ROS2_DOCKER_GEN_CORE.buildDockerfile(resolved);
+            const cp = ROS2_DOCKER_GEN_CORE.buildCompose(resolved);
+            const rm = ROS2_DOCKER_GEN_CORE.buildReadme(resolved);
 
             const dfEl = document.getElementById('dockerfile-out');
             const cpEl = document.getElementById('compose-out');
@@ -2136,15 +2227,27 @@
 
             // Update button counts
             document.querySelectorAll('.btn-primary, .btn-secondary').forEach(btn => {
-                if (btn.textContent.includes('Download All')) btn.textContent = '⬇ Download All (3 files)';
+                if (btn.textContent.includes('Download All')) btn.textContent = '⬇ Download All (.zip)';
                 if (btn.textContent.includes('Dockerfile')) btn.textContent = '⬇ Dockerfile (1)';
                 if (btn.textContent.includes('Download Everything')) btn.textContent = '⬇ Download Everything (3 files)';
             });
         }
 
-        function buildDockerfile() { return ROS2_DOCKER_GEN_CORE.buildDockerfile(state); }
-        function buildCompose() { return ROS2_DOCKER_GEN_CORE.buildCompose(state); }
-        function buildReadme() { return ROS2_DOCKER_GEN_CORE.buildReadme(state); }
+        function buildDockerfile() { 
+            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
+            return ROS2_DOCKER_GEN_CORE.buildDockerfile(resolved); 
+        }
+        function buildCompose() { 
+            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
+            return ROS2_DOCKER_GEN_CORE.buildCompose(resolved); 
+        }
+        function buildReadme() { 
+            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
+            return ROS2_DOCKER_GEN_CORE.buildReadme(resolved); 
+        }
 
         // ============================================================
         // SUMMARY
@@ -2155,12 +2258,17 @@
             const pills = [];
             pills.push({ label: `ROS2 ${state.distro}`, cls: 'cyan', step: 1 });
             pills.push({ label: state.variant, cls: '', step: 1 });
-            if (state.packages.size) pills.push({ label: `${state.packages.size} packages`, cls: 'green', step: 2 });
-            if (state.tools.size) pills.push({ label: `${state.tools.size} dev tools`, cls: '', step: 3 });
+            pills.push({ label: `Host: ${state.hostOs}`, cls: '', step: 1 });
+            
+            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
+
+            if (resolved.packages.length) pills.push({ label: `${resolved.packages.length} packages`, cls: 'green', step: 2 });
+            if (resolved.tools.length) pills.push({ label: `${resolved.tools.length} dev tools`, cls: '', step: 3 });
             if (state.userType !== 'root') pills.push({ label: `user: ${state.username}`, cls: 'green', step: 4 });
             else pills.push({ label: 'root user', cls: 'orange', step: 4 });
-            if (state.packages.has('cuda')) pills.push({ label: 'NVIDIA GPU', cls: 'orange', step: 2 });
-            if (state.tools.has('x11')) pills.push({ label: 'X11 GUI', cls: '', step: 3 });
+            if (resolved.packages.includes('cuda')) pills.push({ label: 'NVIDIA GPU', cls: 'orange', step: 2 });
+            if (resolved.tools.includes('x11')) pills.push({ label: 'X11 GUI', cls: '', step: 3 });
 
             el.innerHTML = pills.map(p => `<span class="pill ${p.cls}" onclick="showStep(${p.step}, true)">${p.label}</span>`).join('');
         }
@@ -2185,14 +2293,20 @@
         }
 
         function downloadAll() {
-            // Since we can't use JSZip from CDN easily in a static file, we download each
-            downloadFile('Dockerfile', buildDockerfile(), 'text/plain');
-            setTimeout(() => downloadFile('docker-compose.yml', buildCompose(), 'text/yaml'), 300);
-            setTimeout(() => downloadFile('README.md', buildReadme(), 'text/markdown'), 600);
+            const zip = window.ROS2_DOCKER_GEN_WEB_BUNDLE.createZipBlob([
+                { name: 'Dockerfile', content: buildDockerfile() },
+                { name: 'docker-compose.yml', content: buildCompose() },
+                { name: 'README.md', content: buildReadme() },
+            ]);
+            downloadBlob('ros2-dockergen-files.zip', zip);
         }
 
         function downloadFile(filename, content, mime) {
             const blob = new Blob([content], { type: mime });
+            downloadBlob(filename, blob);
+        }
+
+        function downloadBlob(filename, blob) {
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = filename;
@@ -2245,11 +2359,40 @@
 
                 if (!core) throw new Error(`Core generator (src/core.js) is not available. This usually happens if the browser blocks local module imports via file:// protocol.`);
 
-                // 3. Initialize and generate
+                // 3. Initialize and sync defaults from shared config
                 core.init(config);
 
+                const detectedOs = await detectHostOs();
+                state.hostOs = detectedOs;
+                renderHostOsChoices();
+
+                const defaults = config.defaults || {};
+                const defaultTools = (core.getToolChoices?.() || []).filter(tool => tool.default).map(tool => tool.value);
+                state.tools = new Set(defaultTools);
+                state.userType = defaults.user_type || 'user';
+                state.username = defaults.username || 'ros-dev';
+                state.uid = String(defaults.uid || 1000);
+                state.workspace = state.userType === 'root'
+                    ? (defaults.root_workspace || '/root/ros2_ws')
+                    : (defaults.user_workspace || '/home/{username}/ros2_ws').replace('{username}', state.username);
+                state.containerName = (defaults.container_name || 'ros2-{distro}').replace('{distro}', state.distro);
+
+                const usernameEl = document.getElementById('username');
+                const uidEl = document.getElementById('user-uid');
+                const workspaceEl = document.getElementById('workspace');
+                const containerEl = document.getElementById('container-name');
+                if (usernameEl) usernameEl.value = state.username;
+                if (uidEl) uidEl.value = state.uid;
+                if (workspaceEl) workspaceEl.value = state.workspace;
+                if (containerEl) containerEl.value = state.containerName;
+
+                document.querySelectorAll('.toggle-row[data-tool]').forEach(el => {
+                    el.classList.toggle('on', state.tools.has(el.dataset.tool));
+                });
+                updateSelectUI('Most Popular');
+
                 // Dynamic version injection
-                const ver = config.version || "1.1.0";
+                const ver = config.version || "1.2.0";
                 document.title = `ROS2 Docker Generator v${ver} — Get Robotics Running Fast`;
                 document.querySelectorAll('.app-version-text').forEach(el => {
                     el.textContent = `v${ver}`;

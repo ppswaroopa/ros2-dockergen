@@ -11,6 +11,7 @@ import argparse
 import re
 import readline as _rl  # noqa: F401
 import json
+import platform
 from pathlib import Path
 from importlib import resources
 
@@ -82,6 +83,7 @@ W = 60
 _selections = {
     "distro":    None,
     "variant":   None,
+    "host_os":   None,
     "packages":  None,
     "tools":     None,
     "user":      None,
@@ -91,7 +93,7 @@ _selections = {
 }
 
 _STEP_LABELS = [
-    "Distro", "Variant", "Packages", "Dev tools",
+    "Distro", "Variant", "Host OS", "Packages", "Dev tools",
     "User", "Workspace", "Container", "Output dir",
 ]
 
@@ -110,21 +112,37 @@ def _summarise(lst: list, n: int = 3) -> str:
     rest  = len(lst) - n
     return (green(shown) + dim(f" +{rest} more")) if rest > 0 else green(shown)
 
+def _detect_os():
+    sys_name = platform.system()
+    if sys_name == "Linux":
+        return "linux"
+    if sys_name == "Windows":
+        ver = platform.version()
+        try:
+            build = int(ver.split('.')[-1])
+            if build >= 22000:
+                return "windows-11"
+        except:
+            pass
+        return "windows-10"
+    return "linux"
+
 def _render_panel(current_step: int) -> list[str]:
     SEP = cyan("─" * W)
     rows: list[str] = []
 
     rows.append(cyan("╔" + "═" * (W - 2) + "╗"))
     title = f"  🤖  ros2-dockergen  v{_VERSION}"
-    rows.append(cyan("║") + bold(_pad(title, W - 2)) + cyan("║"))
+    rows.append(cyan("║") + bold(_pad(title, W-3)) + cyan("║"))
     rows.append(cyan("╚" + "═" * (W - 2) + "╝"))
     rows.append("")
 
-    labels = ["Distro", "Variant", "Packages", "Tools",
+    labels = ["Distro", "Variant", "Host OS", "Packages", "Tools",
               "User", "Workspace", "Container", "Output"]
     values = [
         green(_selections["distro"])                       if _selections["distro"]    else None,
         green(_selections["variant"])                      if _selections["variant"]   else None,
+        green(_selections["host_os"])                      if _selections["host_os"]   else None,
         _summarise(_selections["packages"] or [], 3)       if _selections["packages"] is not None else None,
         _summarise(_selections["tools"]    or [], 4)       if _selections["tools"]    is not None else None,
         _selections["user"]                                if _selections["user"]      else None,
@@ -313,7 +331,8 @@ def _distro_choices() -> list[dict]:
     result = []
     for d in _CORE.get_distros():
         rec   = "  (recommended)" if d["recommended"] else ""
-        label = f"{d['label'].ljust(8)} — Ubuntu {d['ubuntu']} LTS{rec}"
+        lts   = " LTS" if d["is_lts"] else ""
+        label = f"{d['label'].ljust(8)} — Ubuntu {d['ubuntu']}{lts}{rec}"
         result.append({"value": d["value"], "name": label})
     return result
 
@@ -324,19 +343,28 @@ def _variant_choices() -> list[dict]:
         for v in _CORE.get_variants()
     ]
 
-def _package_choices() -> list[dict]:
+def _package_choices(checked: set[str] | None = None) -> list[dict]:
+    checked = checked or set()
     return [
         {"value": p["value"],
-         "name": f"{p['label'].ljust(16)} {p['description']}"}
+         "name": f"{p['label'].ljust(16)} {p['description']}",
+         "checked": p["value"] in checked}
         for p in _CORE.get_ros_package_choices()
     ]
 
-def _tool_choices() -> list[dict]:
+def _tool_choices(checked: set[str] | None = None) -> list[dict]:
+    checked = checked or set()
     return [
         {"value": t["value"],
          "name": f"{t['label'].ljust(11)} {t['description']}",
-         "checked": t["default"]}
+         "checked": t["default"] or t["value"] in checked}
         for t in _CORE.get_tool_choices()
+    ]
+
+def _host_os_choices() -> list[dict]:
+    return [
+        {"value": k, "name": f"{v['label'].ljust(11)} — {v['description']}"}
+        for k, v in _CONFIG_DATA["host_os"].items()
     ]
 
 # -- Final summary -------------------------------------------------------------
@@ -351,6 +379,7 @@ def _print_done(cfg: dict, abs_out: Path) -> None:
     print(bold("  ✅  Files generated"))
     print(SEP)
     print(f"  {dim('Distro   ')}  {green(cfg['distro'])} / {green(cfg['variant'])}")
+    print(f"  {dim('Host OS  ')}  {green(cfg['host_os'])}")
     print(f"  {dim('User     ')}  "
           + (yellow("root") if cfg["user_type"] == "root"
              else green(cfg["username"])))
@@ -398,21 +427,45 @@ def _wizard() -> None:
     _selections["variant"] = variant
     _draw_panel(3)
 
+    detected_os = _detect_os()
+    choices = _host_os_choices()
+    host_os = _select_one(
+        "Which host operating system?",
+        f"Used to configure GUI/X11 forwarding. Detected: {bold(detected_os)}",
+        choices,
+    )
+    _selections["host_os"] = host_os
+    _draw_panel(4)
+
+    package_defaults = set(_CORE.resolve_config({
+        "distro": distro,
+        "variant": variant,
+        "host_os": host_os,
+        "packages": [],
+        "tools": [],
+    })["packages"])
     sel_pkgs = _select_many(
         "Which ROS2 packages to install?",
         "Installed via apt. Select none to start with a clean base.",
-        _package_choices(),
+        _package_choices(package_defaults),
     )
     _selections["packages"] = sel_pkgs
-    _draw_panel(4)
+    _draw_panel(5)
 
+    tool_defaults = set(_CORE.resolve_config({
+        "distro": distro,
+        "variant": variant,
+        "host_os": host_os,
+        "packages": list(sel_pkgs),
+        "tools": [],
+    })["tools"])
     sel_tools = _select_many(
         "Which developer tools to include?",
         "Pre-checked items are recommended for most ROS2 workflows.",
-        _tool_choices(),
+        _tool_choices(tool_defaults),
     )
     _selections["tools"] = sel_tools
-    _draw_panel(5)
+    _draw_panel(6)
 
     user_type = _select_one(
         "Run the container as:",
@@ -423,20 +476,20 @@ def _wizard() -> None:
         ],
     )
 
-    username = "ros-dev"
-    uid      = 1000
+    username = _CORE.default_username()
+    uid      = _CORE.default_uid()
     if user_type == "user":
         username = _input_line(
             "Username inside the container",
             "Creates a Linux user account with this name.",
-            "ros-dev",
+            _CORE.default_username(),
             lambda v: (True if re.match(r"^[a-z_][a-z0-9_-]{0,30}$", v)
                        else "Lowercase letters, digits, _ or - (max 31 chars)"),
         )
         raw_uid = _input_line(
             "UID for the user",
             "Match your host UID to avoid file permission issues (run `id -u`).",
-            "1000",
+            str(_CORE.default_uid()),
             lambda v: True if v.isdigit() else "Must be a positive integer",
         )
         uid = int(raw_uid)
@@ -445,9 +498,9 @@ def _wizard() -> None:
         yellow("root") if user_type == "root"
         else f"{green(username)} {dim(f'(uid {uid})')}"
     )
-    _draw_panel(6)
+    _draw_panel(7)
 
-    default_ws = "/root/ros2_ws" if user_type == "root" else f"/home/{username}/ros2_ws"
+    default_ws = _CORE.default_workspace(username, user_type)
     workspace = _input_line(
         "Workspace path inside the container",
         "Absolute path — this will be mounted from your host.",
@@ -455,17 +508,17 @@ def _wizard() -> None:
         lambda v: True if v.startswith("/") else "Must be an absolute path starting with /",
     )
     _selections["workspace"] = green(workspace)
-    _draw_panel(7)
+    _draw_panel(8)
 
     container_name = _input_line(
         "Container / service name",
         "Used as the docker-compose service name and container hostname.",
-        f"ros2-{distro}",
+        _CORE.default_container_name(distro),
         lambda v: (True if re.match(r"^[a-z0-9][a-z0-9_-]*$", v)
                    else "Lowercase letters, digits, _ or - (must start with letter/digit)"),
     )
     _selections["container"] = green(container_name)
-    _draw_panel(8)
+    _draw_panel(9)
 
     output_dir = _input_line(
         "Output directory",
@@ -475,11 +528,23 @@ def _wizard() -> None:
     )
     _selections["output"] = output_dir
 
+    raw_cfg = {
+        "distro":         distro,
+        "variant":        variant,
+        "host_os":        host_os,
+        "packages":       list(sel_pkgs),
+        "tools":          list(sel_tools),
+    }
+    
+    # Resolve relationships
+    resolved = _CORE.resolve_config(raw_cfg)
+    
     cfg = {
         "distro":         distro,
         "variant":        variant,
-        "packages":       set(sel_pkgs),
-        "tools":          set(sel_tools),
+        "host_os":        host_os,
+        "packages":       resolved["packages"],
+        "tools":          resolved["tools"],
         "user_type":      user_type,
         "username":       username,
         "uid":            uid,

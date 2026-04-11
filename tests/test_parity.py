@@ -28,8 +28,8 @@ CASES = [
         "tools": {"colcon", "rosdep", "python3", "git", "locale", "bashrc"},
         "user_type": "user", "username": "dev", "uid": 1000,
         "workspace": "/ws", "container_name": "ros2-jazzy-cuda"}},
-    {"name": "humble / ros-core / cyclone_dds / ssh+sudo+zsh", "config": {
-        "distro": "humble", "variant": "ros-core",
+    {"name": "humble / ros-base / cyclone_dds / ssh+sudo+zsh", "config": {
+        "distro": "humble", "variant": "ros-base",
         "packages": {"cyclone_dds"},
         "tools": {"colcon", "rosdep", "git", "ssh", "sudo", "zsh", "locale", "bashrc"},
         "user_type": "user", "username": "robot", "uid": 1001,
