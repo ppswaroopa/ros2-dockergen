@@ -7,11 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-04-11
+
 ### Added
 - **Modern NVIDIA Container Support**: Support for `runtime: nvidia` in generated `docker-compose.yml` and the `__GLX_VENDOR_LIBRARY_NAME=nvidia` environment variable to ensure correct GPU offloading and OpenGL vendor selection.
 - **Enhanced Hybrid GPU Support**: Native support for Intel/NVIDIA hybrid laptops via mandatory `/dev/dri` volume mounts for Linux hosts and explicit installation of `libgl1`, `libglvnd-dev`, and `libegl1` for vendor-neutral GL dispatch.
 - **Intelligent Choice Relationships**: Variant selections like `desktop-full` now automatically imply required packages (`rviz2`, `gazebo`/`gz_sim`), and GUI packages automatically enable `x11` display forwarding.
-- **Host OS Awareness**: New "Host OS" selection (auto-detected in CLI and Web) provides tailored Docker Compose scaffolding for Linux, Windows 11 (WSLg), and Windows 10 (X11).
 - **Core Engine Upgrades**: New `resolve_config()` method in both Python and JS core modules to handle automatic dependency resolution and OS-specific scaffolding.
 - Output-shape regression tests in `tests/test_output_shape.py` to verify repo-root workspace mounts, shell config generation, NVIDIA compose behavior, and README/package consistency.
 - Web bundle regression tests in `tests/test_web_bundle.py` to verify the website zip export contains the expected files and preserves byte-identical generated content.
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Generated `docker-compose.yml` now mounts the current directory into the configured ROS workspace by default instead of creating a nested `./ros2_ws` bind mount.
 - Generated Dockerfiles now install Oh My Zsh in the selected user's home after switching to that user, while keeping Zsh as a normal optional tool selection.
 - Generated shell bootstrap now writes ROS/environment setup into `.bashrc` when `bashrc` is selected and into `.zshrc` when `zsh` is selected.
+- The CLI wizard now preselects propagated package and tool defaults for presets such as `desktop-full`, matching the web UI instead of only applying those implications at final generation time.
 - Generated README content now reflects the repo-root workspace workflow, includes clearer NVIDIA host/runtime guidance, and documents the new local `act` runner behavior.
 - CLI/web generation and CI helpers now consistently use the standard non-root `user` mode and current host UID mapping for dev-container readiness.
 - Shared defaults now drive Web, CLI, and CI generation consistently, including the default `ros2-<distro>` container name and default tool selection set.
@@ -36,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolved generated Zsh environments installing Oh My Zsh under `/root` instead of the selected non-root user.
 - Removed misleading generated SSH port documentation when host networking is enabled and Docker would discard published ports.
 - Resolved website download bundles requiring manual renaming of `Dockerfile` before the generated compose setup could build.
+- Resolved generated Gazebo environments missing the ROS plugin library path, which could prevent Gazebo from launching until `GAZEBO_PLUGIN_PATH` was exported manually.
 
 ## [1.1.0] - 2026-03-25
 

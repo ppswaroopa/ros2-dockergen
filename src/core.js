@@ -22,6 +22,12 @@ function sub(str, vars) {
 }
 
 function subAll(arr, vars) { return arr.map(s => sub(s, vars)); }
+function resolveEnvMap(envMap, vars) {
+    return Object.fromEntries(
+        Object.entries(envMap).map(([key, value]) => [key, typeof value === 'string' ? sub(value, vars) : value])
+    );
+}
+function shellQuote(value) { return `'${value.replace(/'/g, `'\"'\"'`)}'`; }
 function homeFor(username, isRoot) { return isRoot ? '/root' : `/home/${username}`; }
 function visiblePackageNames(packages) {
     return [...packages]
@@ -227,7 +233,10 @@ export function buildDockerfile(config) {
 
     for (const pkgKey of pkgsSet) {
         const pkg = CFG.ros_packages[pkgKey];
-        if (pkg && pkg.env) { Object.entries(pkg.env).forEach(([k, v]) => ln(`ENV ${k}=${v}`)); gap(); }
+        if (pkg && pkg.env) {
+            Object.entries(resolveEnvMap(pkg.env, vars)).forEach(([k, v]) => ln(`ENV ${k}=${v}`));
+            gap();
+        }
     }
 
     if (toolsSet.has('ssh')) {
@@ -275,8 +284,8 @@ export function buildDockerfile(config) {
             for (const pkgKey of pkgsSet) {
                 const pkg = CFG.ros_packages[pkgKey];
                 if (pkg && pkg.env) {
-                    Object.entries(pkg.env).forEach(([k, v]) =>
-                        ln(`RUN echo "export ${k}=${v}" >> ${home}/.bashrc`)
+                    Object.entries(resolveEnvMap(pkg.env, vars)).forEach(([k, v]) =>
+                        ln(`RUN echo ${shellQuote(`export ${k}=${v}`)} >> ${home}/.bashrc`)
                     );
                 }
             }
@@ -286,8 +295,8 @@ export function buildDockerfile(config) {
             for (const pkgKey of pkgsSet) {
                 const pkg = CFG.ros_packages[pkgKey];
                 if (pkg && pkg.env) {
-                    Object.entries(pkg.env).forEach(([k, v]) =>
-                        ln(`RUN echo "export ${k}=${v}" >> ${home}/.zshrc`)
+                    Object.entries(resolveEnvMap(pkg.env, vars)).forEach(([k, v]) =>
+                        ln(`RUN echo ${shellQuote(`export ${k}=${v}`)} >> ${home}/.zshrc`)
                     );
                 }
             }
@@ -297,7 +306,10 @@ export function buildDockerfile(config) {
 
     for (const toolKey of toolsSet) {
         const tool = CFG.tools[toolKey];
-        if (tool && tool.env) { Object.entries(tool.env).forEach(([k, v]) => ln(`ENV ${k}=${v}`)); gap(); }
+        if (tool && tool.env) {
+            Object.entries(resolveEnvMap(tool.env, vars)).forEach(([k, v]) => ln(`ENV ${k}=${v}`));
+            gap();
+        }
     }
 
     if (hasCuda) {
@@ -344,7 +356,9 @@ export function buildCompose(config) {
     // ── Environment ─────────────────────────────────────────────
     for (const toolKey of toolsSet) {
         const tool = CFG.tools[toolKey];
-        if (tool && tool.compose_env) Object.entries(tool.compose_env).forEach(([k, v]) => ln(`      - ${k}=${v}`));
+        if (tool && tool.compose_env) {
+            Object.entries(resolveEnvMap(tool.compose_env, { distro })).forEach(([k, v]) => ln(`      - ${k}=${v}`));
+        }
     }
     if (toolsSet.has('x11')) {
         const osCfg = CFG.host_os[currentHostOs] || CFG.host_os.linux;
@@ -359,7 +373,9 @@ export function buildCompose(config) {
 
     for (const pkgKey of pkgsSet) {
         const pkg = CFG.ros_packages[pkgKey];
-        if (pkg && pkg.env) Object.entries(pkg.env).forEach(([k, v]) => ln(`      - ${k}=${v}`));
+        if (pkg && pkg.env) {
+            Object.entries(resolveEnvMap(pkg.env, { distro })).forEach(([k, v]) => ln(`      - ${k}=${v}`));
+        }
     }
 
     // ── Volumes ─────────────────────────────────────────────────

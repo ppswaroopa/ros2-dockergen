@@ -1,6 +1,6 @@
 {
   "_comment": "ros2-dockergen shared configuration — consumed by both core.js (web) and core.py (CLI). Do not encode logic in either consumer; encode it here as rules.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "defaults": {
     "username": "ros-dev",
     "uid": 1000,
@@ -130,6 +130,9 @@
         "ros-{distro}-gazebo-ros-pkgs",
         "ros-{distro}-gazebo-ros2-control"
       ],
+      "env": {
+        "GAZEBO_PLUGIN_PATH": "$GAZEBO_PLUGIN_PATH:/opt/ros/{distro}/lib"
+      },
       "skip_on_distros": [
         "jazzy",
         "kilted"
@@ -143,6 +146,9 @@
       "apt": [
         "ros-{distro}-ros-gz"
       ],
+      "env": {
+        "GAZEBO_PLUGIN_PATH": "$GAZEBO_PLUGIN_PATH:/opt/ros/{distro}/lib"
+      },
       "is_gui": true
     },
     "rviz2": {

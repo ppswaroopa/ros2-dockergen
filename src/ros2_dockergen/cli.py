@@ -133,7 +133,7 @@ def _render_panel(current_step: int) -> list[str]:
 
     rows.append(cyan("╔" + "═" * (W - 2) + "╗"))
     title = f"  🤖  ros2-dockergen  v{_VERSION}"
-    rows.append(cyan("║") + bold(_pad(title, W - 2)) + cyan("║"))
+    rows.append(cyan("║") + bold(_pad(title, W-3)) + cyan("║"))
     rows.append(cyan("╚" + "═" * (W - 2) + "╝"))
     rows.append("")
 
@@ -343,18 +343,21 @@ def _variant_choices() -> list[dict]:
         for v in _CORE.get_variants()
     ]
 
-def _package_choices() -> list[dict]:
+def _package_choices(checked: set[str] | None = None) -> list[dict]:
+    checked = checked or set()
     return [
         {"value": p["value"],
-         "name": f"{p['label'].ljust(16)} {p['description']}"}
+         "name": f"{p['label'].ljust(16)} {p['description']}",
+         "checked": p["value"] in checked}
         for p in _CORE.get_ros_package_choices()
     ]
 
-def _tool_choices() -> list[dict]:
+def _tool_choices(checked: set[str] | None = None) -> list[dict]:
+    checked = checked or set()
     return [
         {"value": t["value"],
          "name": f"{t['label'].ljust(11)} {t['description']}",
-         "checked": t["default"]}
+         "checked": t["default"] or t["value"] in checked}
         for t in _CORE.get_tool_choices()
     ]
 
@@ -434,18 +437,32 @@ def _wizard() -> None:
     _selections["host_os"] = host_os
     _draw_panel(4)
 
+    package_defaults = set(_CORE.resolve_config({
+        "distro": distro,
+        "variant": variant,
+        "host_os": host_os,
+        "packages": [],
+        "tools": [],
+    })["packages"])
     sel_pkgs = _select_many(
         "Which ROS2 packages to install?",
         "Installed via apt. Select none to start with a clean base.",
-        _package_choices(),
+        _package_choices(package_defaults),
     )
     _selections["packages"] = sel_pkgs
     _draw_panel(5)
 
+    tool_defaults = set(_CORE.resolve_config({
+        "distro": distro,
+        "variant": variant,
+        "host_os": host_os,
+        "packages": list(sel_pkgs),
+        "tools": [],
+    })["tools"])
     sel_tools = _select_many(
         "Which developer tools to include?",
         "Pre-checked items are recommended for most ROS2 workflows.",
-        _tool_choices(),
+        _tool_choices(tool_defaults),
     )
     _selections["tools"] = sel_tools
     _draw_panel(6)

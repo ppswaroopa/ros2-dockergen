@@ -51,13 +51,39 @@ def main():
         "container_name": "ros2-humble",
     }
 
+    gazebo_cfg = {
+        "distro": "humble",
+        "variant": "desktop-full",
+        "packages": {"gazebo"},
+        "tools": {"colcon", "rosdep", "python3", "git", "locale", "bashrc", "zsh", "x11"},
+        "user_type": "user",
+        "username": "sim",
+        "uid": 1000,
+        "workspace": "/home/sim/ws",
+        "container_name": "ros2-humble-gazebo",
+    }
+
     dockerfile = core.build_dockerfile(dev_cfg)
     compose = core.build_compose(dev_cfg)
     readme = core.build_readme(dev_cfg)
     root_readme = core.build_readme(root_cfg)
+    gazebo_dockerfile = core.build_dockerfile(gazebo_cfg)
+    gazebo_compose = core.build_compose(gazebo_cfg)
 
     if core.default_container_name("jazzy") != "ros2-jazzy":
         raise AssertionError("default container name should resolve to ros2-jazzy")
+
+    resolved_defaults = core.resolve_config({
+        "distro": "jazzy",
+        "variant": "desktop-full",
+        "host_os": "linux",
+        "packages": [],
+        "tools": [],
+    })
+    if set(resolved_defaults["packages"]) != {"rviz2", "gz_sim"}:
+        raise AssertionError("desktop-full should imply rviz2 and jazzy's Gazebo package")
+    if "x11" not in resolved_defaults["tools"]:
+        raise AssertionError("GUI package implications should also enable x11")
 
     assert_contains(compose, "      - .:/home/ros-dev/ros2_ws:rw", "compose")
     assert_not_contains(compose, "./ros2_ws:", "compose")
@@ -69,6 +95,10 @@ def main():
     assert_contains(dockerfile, "    python3-libnvinfer \\", "dockerfile")
     assert_contains(dockerfile, "ENV NVIDIA_VISIBLE_DEVICES=all", "dockerfile")
     assert_contains(dockerfile, "ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics", "dockerfile")
+    assert_contains(gazebo_dockerfile, "ENV GAZEBO_PLUGIN_PATH=$GAZEBO_PLUGIN_PATH:/opt/ros/humble/lib", "gazebo dockerfile env")
+    assert_contains(gazebo_dockerfile, "RUN echo 'export GAZEBO_PLUGIN_PATH=$GAZEBO_PLUGIN_PATH:/opt/ros/humble/lib' >> /home/sim/.bashrc", "gazebo bashrc export")
+    assert_contains(gazebo_dockerfile, "RUN echo 'export GAZEBO_PLUGIN_PATH=$GAZEBO_PLUGIN_PATH:/opt/ros/humble/lib' >> /home/sim/.zshrc", "gazebo zshrc export")
+    assert_contains(gazebo_compose, "      - GAZEBO_PLUGIN_PATH=$GAZEBO_PLUGIN_PATH:/opt/ros/humble/lib", "gazebo compose env")
 
     user_idx = dockerfile.index("USER ros-dev")
     zsh_idx = dockerfile.index('RUN export HOME=/home/ros-dev && sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended')

@@ -22,6 +22,15 @@ class GeneratorCore:
     def _sub_all(self, arr, variables):
         return [self._sub(s, variables) for s in arr]
 
+    def _resolve_env_map(self, env_map, variables):
+        return {
+            key: self._sub(value, variables) if isinstance(value, str) else value
+            for key, value in env_map.items()
+        }
+
+    def _shell_quote(self, value):
+        return "'" + value.replace("'", "'\"'\"'") + "'"
+
     def _home_for(self, username, is_root):
         return "/root" if is_root else f"/home/{username}"
 
@@ -250,7 +259,7 @@ class GeneratorCore:
         for pkg_key in packages:
             pkg = self._cfg["ros_packages"].get(pkg_key)
             if pkg and pkg.get("env"):
-                for k, v in pkg["env"].items():
+                for k, v in self._resolve_env_map(pkg["env"], variables).items():
                     ln(f"ENV {k}={v}")
                 gap()
                 
@@ -299,21 +308,21 @@ class GeneratorCore:
                 for pkg_key in packages:
                     pkg = self._cfg["ros_packages"].get(pkg_key)
                     if pkg and pkg.get("env"):
-                        for k, v in pkg["env"].items():
-                            ln(f"RUN echo \"export {k}={v}\" >> {home}/.bashrc")
+                        for k, v in self._resolve_env_map(pkg["env"], variables).items():
+                            ln(f"RUN echo {self._shell_quote(f'export {k}={v}')} >> {home}/.bashrc")
             if "zsh" in tools:
                 ln(f"RUN echo \"source /opt/ros/{distro}/setup.bash\" >> {home}/.zshrc")
                 for pkg_key in packages:
                     pkg = self._cfg["ros_packages"].get(pkg_key)
                     if pkg and pkg.get("env"):
-                        for k, v in pkg["env"].items():
-                            ln(f"RUN echo \"export {k}={v}\" >> {home}/.zshrc")
+                        for k, v in self._resolve_env_map(pkg["env"], variables).items():
+                            ln(f"RUN echo {self._shell_quote(f'export {k}={v}')} >> {home}/.zshrc")
             gap()
             
         for tool_key in tools:
             tool = self._cfg["tools"].get(tool_key)
             if tool and tool.get("env"):
-                for k, v in tool["env"].items():
+                for k, v in self._resolve_env_map(tool["env"], variables).items():
                     ln(f"ENV {k}={v}")
                 gap()
                 
@@ -365,7 +374,7 @@ class GeneratorCore:
         for tool_key in tools:
             tool = self._cfg["tools"].get(tool_key)
             if tool and tool.get("compose_env"):
-                for k, v in tool["compose_env"].items():
+                for k, v in self._resolve_env_map(tool["compose_env"], {"distro": distro}).items():
                     ln(f"      - {k}={v}")
                     
         if "x11" in tools:
@@ -380,7 +389,7 @@ class GeneratorCore:
         for pkg_key in packages:
             pkg = self._cfg["ros_packages"].get(pkg_key)
             if pkg and pkg.get("env"):
-                for k, v in pkg["env"].items():
+                for k, v in self._resolve_env_map(pkg["env"], {"distro": distro}).items():
                     ln(f"      - {k}={v}")
                     
         # ── Volumes ─────────────────────────────────────────────────
