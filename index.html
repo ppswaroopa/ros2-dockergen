@@ -1200,7 +1200,7 @@
                     <div class="radio-dot"></div>
                     <div class="option-icon">🦖</div>
                     <div class="option-name">Kilted Kaiju</div>
-                    <div class="option-desc">Latest available version<br>Ubuntu 24.10</div>
+                    <div class="option-desc">non-LTS · Ubuntu 24.04<br>Supported until Nov 2026</div>
                     <div class="option-badge"
                         style="background:rgba(0, 212, 255, 0.1);color:var(--cyan);border-color:rgba(0, 212, 255, 0.3);">
                         Latest</div>
@@ -1225,8 +1225,7 @@
                 <div class="info-box-text"><strong>Which variant should I pick?</strong> Choose
                     <strong>ros-base</strong> for
                     headless/embedded systems with minimal overhead. Choose <strong>desktop</strong> if you plan to run
-                    RViz or
-                    Gazebo GUIs. Choose <strong>desktop-full</strong> for a complete ready-to-go experience (largest
+                    RViz. Choose <strong>desktop-full</strong> for a complete ready-to-go experience (largest
                     image).
                 </div>
             </div>
@@ -1234,18 +1233,18 @@
                 <div class="radio-card selected" data-variant="ros-base" onclick="selectVariant(this)">
                     <div class="radio-dot"></div>
                     <div class="option-name">ros-base</div>
-                    <div class="option-desc">Core ROS2 only<br>~1.2 GB · Minimal</div>
+                    <div class="option-desc">Core ROS2 only<br>Minimal</div>
                 </div>
                 <div class="radio-card" data-variant="desktop" onclick="selectVariant(this)">
                     <div class="radio-dot"></div>
                     <div class="option-name">desktop</div>
-                    <div class="option-desc">+ RViz2 + tools<br>~2.8 GB · Recommended</div>
+                    <div class="option-desc">+ RViz2 + tools<br>Recommended</div>
                     <div class="option-badge rec">Recommended</div>
                 </div>
                 <div class="radio-card" data-variant="desktop-full" onclick="selectVariant(this)">
                     <div class="radio-dot"></div>
                     <div class="option-name">desktop-full</div>
-                    <div class="option-desc">+ Gazebo + demos<br>~4.5 GB · Everything</div>
+                    <div class="option-desc">+ Gazebo + demos<br>Everything</div>
                 </div>
             </div>
 
@@ -1285,7 +1284,7 @@
                     <div class="option-check">✓</div>
                     <span class="option-icon">📡</span>
                     <div class="option-name">SLAM Toolbox</div>
-                    <div class="option-desc">Simultaneous localization and mapping. Build maps while navigating</div>
+                    <div class="option-desc">Simultaneous localization and mapping.</div>
                 </div>
                 <div class="option-card" data-pkg="cartographer" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
@@ -1309,7 +1308,8 @@
                     <span class="option-icon">💠</span>
                     <div class="option-name">Ignition / Gz Sim</div>
                     <div class="option-desc">Next-gen Gazebo (Ignition). Modern physics, better ROS2 bridging</div>
-                    <div class="option-badge rec">New Gazebo</div>
+                    <div class="option-badge rec">New</div>
+                    <div class="option-badge">GUI Required</div>
                 </div>
                 <div class="option-card" data-pkg="rviz2" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
@@ -1412,10 +1412,8 @@
                     <div class="option-check">✓</div>
                     <span class="option-icon">🌪️</span>
                     <div class="option-name">CycloneDDS</div>
-                    <div class="option-desc">Alternative DDS implementation — faster and more reliable for many
-                        use
-                        cases</div>
-                    <div class="option-badge rec">Recommended DDS</div>
+                    <div class="option-desc">Alternative DDS implementation — faster and more reliable </div>
+                    <!-- <div class="option-badge rec">Recommended DDS</div> -->
                 </div>
                 <div class="option-card" data-pkg="rosbridge" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
@@ -1463,8 +1461,7 @@
                     <div class="option-check">✓</div>
                     <span class="option-icon">🧠</span>
                     <div class="option-name">TensorRT</div>
-                    <div class="option-desc">NVIDIA's deep learning inference optimizer — run neural networks
-                        fast</div>
+                    <div class="option-desc">NVIDIA's deep learning inference optimizer</div>
                     <div class="option-badge gpu">NVIDIA GPU</div>
                 </div>
             </div>
@@ -1618,8 +1615,7 @@
                     <div>
                         <div class="toggle-label">X11 Display Forwarding</div>
                         <div class="toggle-sub">Run GUI apps (RViz, Gazebo) from inside the container on your
-                            Windows
-                            desktop</div>
+                            host machine</div>
                     </div>
                 </div>
                 <div class="toggle-switch"></div>
