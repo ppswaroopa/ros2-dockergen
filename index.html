@@ -368,11 +368,38 @@
             color: #000;
         }
 
-        .option-icon {
-            font-size: 28px;
+        .option-card .option-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            font-size: 30px;
+            line-height: 1;
+            color: var(--cyan);
+        }
+
+        .option-card .option-icon svg {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+        }
+
+        .option-image {
+            width: 72px;
+            height: 72px;
             margin-bottom: 12px;
             display: block;
-            line-height: 1;
+            object-fit: contain;
+            object-position: left center;
+            filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.28));
+        }
+
+        .option-image.package-logo {
+            width: 64px;
+            height: 64px;
+            flex-shrink: 0;
         }
 
         .option-name {
@@ -1184,21 +1211,21 @@
             <div class="radio-grid" id="distro-grid">
                 <div class="radio-card selected" data-distro="humble" onclick="selectDistro(this)">
                     <div class="radio-dot"></div>
-                    <div class="option-icon">🐢</div>
+                    <img class="option-image" src="docs/humble.png" alt="ROS 2 Humble Hawksbill artwork">
                     <div class="option-name">Humble Hawksbill</div>
                     <div class="option-desc">LTS · Ubuntu 22.04<br>Supported until May 2027</div>
                     <div class="option-badge rec">Most Popular</div>
                 </div>
                 <div class="radio-card" data-distro="jazzy" onclick="selectDistro(this)">
                     <div class="radio-dot"></div>
-                    <div class="option-icon">🎷</div>
+                    <img class="option-image" src="docs/JazzyNoBG.png" alt="ROS 2 Jazzy Jalisco artwork">
                     <div class="option-name">Jazzy Jalisco</div>
                     <div class="option-desc">LTS · Ubuntu 24.04<br>Supported until May 2029</div>
                     <div class="option-badge rec">Latest LTS</div>
                 </div>
                 <div class="radio-card" data-distro="kilted" onclick="selectDistro(this)">
                     <div class="radio-dot"></div>
-                    <div class="option-icon">🦖</div>
+                    <img class="option-image" src="docs/kilted-kaiju.png" alt="ROS 2 Kilted Kaiju artwork">
                     <div class="option-name">Kilted Kaiju</div>
                     <div class="option-desc">non-LTS · Ubuntu 24.04<br>Supported until Nov 2026</div>
                     <div class="option-badge"
@@ -1268,14 +1295,7 @@
             <div class="options-grid">
                 <div class="option-card" data-pkg="nav2" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2a8 8 0 0 0-8 8c0 4.42 3.58 8 8 8s8-3.58 8-8a8 8 0 0 0-8-8z" />
-                            <path d="M12 18v4" />
-                            <path d="M8 22h8" />
-                        </svg>
-                    </span>
+                    <img class="option-image package-logo" src="docs/nav2_logo.png" alt="NAV2 logo">
                     <div class="option-name">NAV2</div>
                     <div class="option-desc">Full navigation stack: SLAM, path planning, obstacle avoidance, recovery
                         behaviors</div>
@@ -1297,7 +1317,7 @@
             <div class="options-grid">
                 <div class="option-card" data-pkg="gazebo" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">📦</span>
+                    <img class="option-image package-logo" src="docs/gz_classic.png" alt="Gazebo Classic logo">
                     <div class="option-name">Gazebo Classic</div>
                     <div class="option-desc">Full physics simulator for testing robots. Requires X11 or display
                         forwarding</div>
@@ -1305,9 +1325,9 @@
                 </div>
                 <div class="option-card" data-pkg="gz_sim" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">💠</span>
-                    <div class="option-name">Ignition / Gz Sim</div>
-                    <div class="option-desc">Next-gen Gazebo (Ignition). Modern physics, better ROS2 bridging</div>
+                    <img class="option-image package-logo" id="gz-sim-logo" src="docs/gz_harmonic.jpeg" alt="Gazebo logo">
+                    <div class="option-name" id="gz-sim-name">Gazebo Harmonic</div>
+                    <div class="option-desc" id="gz-sim-desc">Default Gazebo for Jazzy. Modern Gazebo stack with ROS 2 bridging and GUI tooling</div>
                     <div class="option-badge rec">New</div>
                     <div class="option-badge">GUI Required</div>
                 </div>
@@ -1335,18 +1355,7 @@
                 </div>
                 <div class="option-card" data-pkg="moveit2" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
-                            <rect x="3" y="18" width="6" height="3" rx="1" fill="currentColor" />
-                            <path d="M6 18L8 10L16 7L20 11" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                            <circle cx="6" cy="18" r="1.5" fill="currentColor" />
-                            <circle cx="8" cy="10" r="1.5" fill="currentColor" />
-                            <circle cx="16" cy="7" r="1.5" fill="currentColor" />
-                            <circle cx="20" cy="11" r="2" stroke="currentColor" stroke-width="1.5" />
-                        </svg>
-
-                    </span>
+                    <img class="option-image package-logo" src="docs/moveit_logo-white.png" alt="MoveIt logo">
                     <div class="option-name">MoveIt2</div>
                     <div class="option-desc">Motion planning framework for robotic arms and manipulation</div>
                 </div>
@@ -1382,7 +1391,7 @@
                 </div>
                 <div class="option-card" data-pkg="cv_bridge" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">📷</span>
+                    <img class="option-image package-logo" src="docs/OpenCV_logo_black-2.png" alt="OpenCV logo">
                     <div class="option-name">CV Bridge + OpenCV</div>
                     <div class="option-desc">Convert between ROS image messages and OpenCV for computer vision
                         pipelines
@@ -1410,7 +1419,7 @@
             <div class="options-grid">
                 <div class="option-card" data-pkg="cyclone_dds" onclick="togglePkg(this)">
                     <div class="option-check">✓</div>
-                    <span class="option-icon">🌪️</span>
+                    <img class="option-image package-logo" src="docs/cyclone_dds.png" alt="CycloneDDS logo">
                     <div class="option-name">CycloneDDS</div>
                     <div class="option-desc">Alternative DDS implementation — faster and more reliable </div>
                     <!-- <div class="option-badge rec">Recommended DDS</div> -->
@@ -1849,12 +1858,12 @@
                 </div>
                 <div class="download-bar">
                     <div class="download-info">
-                        Ready to use · <span id="file-count">2 files</span> generated
+                        Ready to use · <span id="file-count">3 files</span> generated
                     </div>
                     <div class="btn-group">
                         <button class="btn btn-ghost" onclick="copyCurrentTab()">📋 Copy</button>
                         <button class="btn btn-secondary" onclick="downloadAll()">⬇ Download All (.zip)</button>
-                        <button class="btn btn-primary" onclick="downloadDockerfile()">⬇ Dockerfile</button>
+                        <button class="btn btn-primary" onclick="downloadCurrentTab()">⬇ Dockerfile</button>
                     </div>
                 </div>
             </div>
@@ -1889,7 +1898,7 @@
                     <div class="qs-step">
                         <div class="qs-num">03</div>
                         <div class="qs-title">Place & Build</div>
-                        <div class="qs-text">Put both files in a folder. Open a terminal in that folder (WSL or
+                        <div class="qs-text">Extract the zip file. Open a terminal in that folder (WSL or
                             PowerShell).</div>
                         <span class="qs-cmd">docker compose build</span>
                     </div>
@@ -2053,6 +2062,7 @@
             if (containerInput && (containerInput.value === '' || containerInput.value === `ros2-${oldDistro}`)) {
                 containerInput.value = `ros2-${state.distro}`;
             }
+            updatePackageArtwork();
             generateFiles();
         }
 
@@ -2170,6 +2180,7 @@
             tabEl.classList.add('active');
             document.getElementById(tabId).classList.add('active');
             state.currentTab = tabId;
+            updatePrimaryDownloadButton();
         }
 
         // ============================================================
@@ -2194,12 +2205,47 @@
             });
         }
 
+        function updatePackageArtwork() {
+            const gzByDistro = {
+                humble: {
+                    src: 'docs/gz_fortress.jpeg',
+                    alt: 'Gazebo Fortress logo',
+                    name: 'Gazebo Fortress',
+                    desc: 'Default Gazebo for Humble. Fortress-era Gazebo with ROS 2 integration and GUI tooling'
+                },
+                jazzy: {
+                    src: 'docs/gz_harmonic.jpeg',
+                    alt: 'Gazebo Harmonic logo',
+                    name: 'Gazebo Harmonic',
+                    desc: 'Default Gazebo for Jazzy. Modern Gazebo stack with ROS 2 bridging and GUI tooling'
+                },
+                kilted: {
+                    src: 'docs/gz_ionic.png',
+                    alt: 'Gazebo Ionic logo',
+                    name: 'Gazebo Ionic',
+                    desc: 'Default Gazebo for Kilted. Latest Gazebo line with ROS 2 bridging and GUI tooling'
+                }
+            };
+
+            const current = gzByDistro[state.distro] || gzByDistro.jazzy;
+            const logo = document.getElementById('gz-sim-logo');
+            const name = document.getElementById('gz-sim-name');
+            const desc = document.getElementById('gz-sim-desc');
+            if (logo) {
+                logo.src = current.src;
+                logo.alt = current.alt;
+            }
+            if (name) name.textContent = current.name;
+            if (desc) desc.textContent = current.desc;
+        }
+
         function generateFiles() {
             // Sync state with inputs
             state.username = document.getElementById('username')?.value || 'ros-dev';
             state.uid = document.getElementById('user-uid')?.value || '1000';
             state.workspace = document.getElementById('workspace')?.value || (state.userType === 'root' ? '/root/ros2_ws' : `/home/${state.username}/ros2_ws`);
             state.containerName = document.getElementById('container-name')?.value || `ros2-${state.distro}`;
+            updatePackageArtwork();
 
             const rawConfig = {
                 ...state,
@@ -2224,9 +2270,9 @@
             // Update button counts
             document.querySelectorAll('.btn-primary, .btn-secondary').forEach(btn => {
                 if (btn.textContent.includes('Download All')) btn.textContent = '⬇ Download All (.zip)';
-                if (btn.textContent.includes('Dockerfile')) btn.textContent = '⬇ Dockerfile (1)';
                 if (btn.textContent.includes('Download Everything')) btn.textContent = '⬇ Download Everything (3 files)';
             });
+            updatePrimaryDownloadButton();
         }
 
         function buildDockerfile() { 
@@ -2283,9 +2329,25 @@
         // ============================================================
         // DOWNLOAD
         // ============================================================
-        function downloadDockerfile() {
-            const content = buildDockerfile();
-            downloadFile('Dockerfile', content, 'text/plain');
+        function getCurrentTabFile() {
+            if (state.currentTab === 'tab-compose') {
+                return { filename: 'docker-compose.yml', content: buildCompose(), mime: 'text/yaml' };
+            }
+            if (state.currentTab === 'tab-readme') {
+                return { filename: 'README.md', content: buildReadme(), mime: 'text/markdown' };
+            }
+            return { filename: 'Dockerfile', content: buildDockerfile(), mime: 'text/plain' };
+        }
+
+        function updatePrimaryDownloadButton() {
+            const btn = document.querySelector('.download-bar .btn-primary');
+            if (!btn) return;
+            btn.textContent = `⬇ ${getCurrentTabFile().filename}`;
+        }
+
+        function downloadCurrentTab() {
+            const file = getCurrentTabFile();
+            downloadFile(file.filename, file.content, file.mime);
         }
 
         function downloadAll() {
