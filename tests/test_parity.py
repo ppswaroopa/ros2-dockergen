@@ -47,6 +47,20 @@ CASES = [
                   "x11", "net_tools", "locale", "bashrc", "sudo"},
         "user_type": "user", "username": "dev", "uid": 1000,
         "workspace": "/dev_ws", "container_name": "ros2-jazzy-dev"}},
+    {"name": "raspberry pi arm64 / jazzy / desktop / resolved", "config": {
+        "target_platform": "raspberry-pi-arm64",
+        "distro": "jazzy", "variant": "desktop",
+        "packages": {"rviz2"},
+        "tools": {"colcon", "rosdep", "python3", "git", "locale", "bashrc"},
+        "user_type": "user", "username": "pi", "uid": 1000,
+        "workspace": "/home/pi/ros2_ws", "container_name": "ros2-pi"}},
+    {"name": "jetson orin arm64 / jazzy experimental / cuda+tensorrt", "config": {
+        "target_platform": "jetson-orin-jetpack6-arm64",
+        "distro": "jazzy", "variant": "desktop",
+        "packages": {"cuda", "tensorrt", "cv_bridge"},
+        "tools": {"colcon", "rosdep", "python3", "git", "locale", "bashrc"},
+        "user_type": "user", "username": "jetson", "uid": 1000,
+        "workspace": "/home/jetson/ros2_ws", "container_name": "ros2-jetson"}},
 ]
 
 # The JS runner — Native ESM version
@@ -68,10 +82,11 @@ RUNNER_PATH.write_text(
     "    containerName: raw.container_name,\n"
     "    userType:      raw.user_type,\n"
     "};\n"
+    "const resolved = CORE.resolveConfig(cfg);\n"
     "process.stdout.write(JSON.stringify({\n"
-    "    dockerfile: CORE.buildDockerfile(cfg),\n"
-    "    compose:    CORE.buildCompose(cfg),\n"
-    "    readme:     CORE.buildReadme(cfg),\n"
+    "    dockerfile: CORE.buildDockerfile(resolved),\n"
+    "    compose:    CORE.buildCompose(resolved),\n"
+    "    readme:     CORE.buildReadme(resolved),\n"
     "}));\n"
 )
 
@@ -85,9 +100,10 @@ def run_js(config):
 
 def run_py(config):
     core = GeneratorCore.from_file(ROOT / "src" / "ros2_dockergen" / "data" / "config.json")
-    return {"dockerfile": core.build_dockerfile(config),
-            "compose":    core.build_compose(config),
-            "readme":     core.build_readme(config)}
+    cfg = core.resolve_config(config)
+    return {"dockerfile": core.build_dockerfile(cfg),
+            "compose":    core.build_compose(cfg),
+            "readme":     core.build_readme(cfg)}
 
 def first_diff(a, b, label):
     if a == b: return None

@@ -50,6 +50,9 @@ class GeneratorCore:
     def default_user_type(self):
         return self._cfg["defaults"]["user_type"]
 
+    def default_target_platform(self):
+        return self._cfg["defaults"].get("target_platform", "amd64")
+
     def default_workspace(self, username, user_type):
         template = self._cfg["defaults"]["root_workspace"] if user_type == "root" else self._cfg["defaults"]["user_workspace"]
         return self._sub(template, {"username": username})
@@ -57,29 +60,59 @@ class GeneratorCore:
     def default_container_name(self, distro):
         return self._sub(self._cfg["defaults"]["container_name"], {"distro": distro})
 
-    def get_base_image(self, distro, variant, has_cuda):
+    def _target_platform(self, config_or_key=None):
+        key = "amd64"
+        if isinstance(config_or_key, dict):
+            key = config_or_key.get("target_platform", config_or_key.get("targetPlatform", "amd64"))
+        elif config_or_key:
+            key = config_or_key
+        return self._cfg.get("target_platforms", {}).get(key, self._cfg.get("target_platforms", {}).get("amd64", {}))
+
+    def _target_key(self, config):
+        explicit = config.get("target_platform", config.get("targetPlatform"))
+        if explicit:
+            return explicit
+        host_os = config.get("host_os", config.get("hostOs"))
+        if host_os:
+            host_cfg = self._cfg.get("host_os", {}).get(host_os, {})
+            if host_cfg.get("target_platform"):
+                return host_cfg["target_platform"]
+        return "amd64"
+
+    def is_jetson_target(self, target_platform):
+        return bool(self._target_platform(target_platform).get("jetson"))
+
+    def get_base_image(self, distro, variant, has_cuda, target_platform="amd64"):
         d = self._cfg["distros"].get(distro)
         if not d:
             raise ValueError(f"Unknown distro: {distro}")
-        
-        if has_cuda:
+
+        target = self._target_platform(target_platform)
+        if has_cuda and not target.get("jetson"):
             return self._sub(self._cfg["cuda_base_image"], {
                 "cuda_version": d["cuda_version"],
                 "ubuntu_image_suffix": d["ubuntu_image_suffix"]
             })
-            
+
+        if target.get("force_ros_base_for_variants"):
+            return self._sub(self._cfg["variants"]["ros-base"]["base_image"], {"distro": distro})
+
         v = self._cfg["variants"].get(variant)
         if not v:
             raise ValueError(f"Unknown variant: {variant}")
             
         return self._sub(v["base_image"], {"distro": distro})
 
-    def resolve_ros_package_apt(self, pkg_key, distro):
+    def resolve_ros_package_apt(self, pkg_key, distro, target_platform="amd64"):
         pkg = self._cfg["ros_packages"].get(pkg_key)
         if not pkg:
             return []
 
         variables = {"distro": distro}
+        target = self._target_platform(target_platform)
+
+        if target.get("jetson") and "jetson_apt" in pkg:
+            return self._sub_all(pkg.get("jetson_apt", []), variables)
 
         if pkg.get("apt_by_distros"):
             apt_by_distro = pkg["apt_by_distros"]
@@ -112,6 +145,28 @@ class GeneratorCore:
         variant = res["variant"]
         packages = set(res.get("packages", []))
         tools = set(res.get("tools", []))
+        target_key = self._target_key(res)
+        target = self._target_platform(target_key)
+        warnings = list(res.get("warnings", []))
+
+        if target.get("blocks_packages"):
+            blocked = set(target["blocks_packages"])
+            removed = sorted(packages & blocked)
+            packages -= blocked
+            if removed:
+                labels = self._visible_package_names(removed)
+                warnings.append(
+                    "{} does not support {}; removed from the generated config.".format(
+                        target.get("label", target_key), ", ".join(labels)
+                    )
+                )
+
+        tier1 = set(target.get("tier1_distros", target.get("supported_distros", [])))
+        if tier1 and distro not in tier1:
+            warnings.append(target.get(
+                "experimental_warning",
+                f"{distro} is experimental on {target.get('label', target_key)}."
+            ))
         
         # 1. Variant Implications
         v_cfg = self._cfg["variants"].get(variant, {})
@@ -134,9 +189,21 @@ class GeneratorCore:
         if has_gui_pkg:
             tools.add("x11")
             
-        res["packages"] = list(packages)
-        res["tools"] = list(tools)
+        res["packages"] = sorted(packages)
+        res["tools"] = sorted(tools)
+        res["target_platform"] = target_key
+        res["warnings"] = warnings
         return res
+
+    def _variant_upgrade_apt(self, distro, variant, target_platform):
+        target = self._target_platform(target_platform)
+        if variant == "ros-base":
+            return []
+        if target.get("force_ros_base_for_variants"):
+            return [f"ros-{distro}-{variant}"]
+        if variant == "desktop-full":
+            return self._sub_all(self._cfg["variants"]["desktop-full"].get("extra_apt", []), {"distro": distro})
+        return []
 
     def build_dockerfile(self, config):
         distro = config["distro"]
@@ -147,9 +214,12 @@ class GeneratorCore:
         uid = config["uid"]
         workspace = config["workspace"]
         user_type = config.get("userType", config.get("user_type"))
-        
+        target_platform = self._target_key(config)
+
         is_root = user_type == "root"
         has_cuda = "cuda" in packages or "tensorrt" in packages
+        target = self._target_platform(target_platform)
+        has_nvidia_runtime = has_cuda or target.get("nvidia_runtime", False)
         d = self._cfg["distros"][distro]
         variables = {
             "distro": distro,
@@ -166,10 +236,10 @@ class GeneratorCore:
         ln(f"# Generated by ros2-dockergen v{self._cfg['version']}")
         ln("# =============================================================")
         gap()
-        ln(f"FROM {self.get_base_image(distro, variant, has_cuda)}")
+        ln(f"FROM {self.get_base_image(distro, variant, has_cuda, target_platform)}")
         gap()
-        
-        if has_cuda:
+
+        if has_cuda and not target.get("jetson"):
             ln("# ── Install ROS2 on top of CUDA base ───────────────────────")
             ln("ENV DEBIAN_FRONTEND=noninteractive")
             ln("RUN apt-get update && apt-get install -y \\")
@@ -188,11 +258,11 @@ class GeneratorCore:
         ln("SHELL [\"/bin/bash\", \"-c\"]")
         gap()
         
-        if not has_cuda and variant == "desktop-full":
-            extra = self._sub_all(self._cfg["variants"]["desktop-full"].get("extra_apt", []), {"distro": distro})
-            ln("# ── Upgrade to desktop-full ─────────────────────────────────")
+        variant_apt = self._variant_upgrade_apt(distro, variant, target_platform)
+        if not (has_cuda and not target.get("jetson")) and variant_apt:
+            ln(f"# ── Upgrade to {variant} ─────────────────────────────────────")
             ln("RUN apt-get update && apt-get install -y \\")
-            for p in extra:
+            for p in variant_apt:
                 ln(f"    {p} \\")
             ln("    && rm -rf /var/lib/apt/lists/*")
             gap()
@@ -247,7 +317,7 @@ class GeneratorCore:
             
         ros_apt = []
         for pkg_key in packages:
-            ros_apt.extend(self.resolve_ros_package_apt(pkg_key, distro))
+            ros_apt.extend(self.resolve_ros_package_apt(pkg_key, distro, target_platform))
         if ros_apt:
             ln("# ── ROS2 packages ────────────────────────────────────────────")
             ln("RUN apt-get update && apt-get install -y \\")
@@ -326,8 +396,9 @@ class GeneratorCore:
                     ln(f"ENV {k}={v}")
                 gap()
                 
-        if has_cuda:
-            ln("# ── NVIDIA GPU runtime ──────────────────────────────────────")
+        if has_nvidia_runtime:
+            title = "Jetson NVIDIA runtime" if target.get("jetson") else "NVIDIA GPU runtime"
+            ln(f"# ── {title} ─────────────────────────────────────")
             ln("ENV NVIDIA_VISIBLE_DEVICES=all")
             ln("ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics")
             gap()
@@ -343,9 +414,12 @@ class GeneratorCore:
         container_name = config.get("containerName", config.get("container_name"))
         user_type = config.get("userType", config.get("user_type"))
         host_os = config.get("host_os", config.get("hostOs", "linux"))
-        
+        target_platform = self._target_key(config)
+
         is_root = user_type == "root"
         has_cuda = "cuda" in packages or "tensorrt" in packages
+        target = self._target_platform(target_platform)
+        has_nvidia_runtime = has_cuda or target.get("nvidia_runtime", False)
         
         L = []
         def ln(s): L.append(s)
@@ -363,6 +437,8 @@ class GeneratorCore:
         ln(f"    image: ros2-{distro}-{container_name}:latest")
         ln(f"    container_name: {container_name}")
         ln(f"    hostname: {container_name}")
+        if target.get("arch") == "arm64" and target.get("docker_platform"):
+            ln(f"    platform: {target['docker_platform']}")
         ln("    stdin_open: true")
         ln("    tty: true")
         ln("    restart: unless-stopped")
@@ -383,7 +459,7 @@ class GeneratorCore:
                 for k, v in os_cfg["x11_env"].items():
                     ln(f"      - {k}={v}")
         
-        if has_cuda:
+        if has_nvidia_runtime:
             ln("      - __GLX_VENDOR_LIBRARY_NAME=nvidia")
 
         for pkg_key in packages:
@@ -407,7 +483,7 @@ class GeneratorCore:
                 for v in os_cfg["x11_volumes"]:
                     ln(f"      - {v}")
                     
-        if has_cuda:
+        if has_nvidia_runtime:
             ln("    runtime: nvidia")
             
         return "\n".join(L)
@@ -422,22 +498,36 @@ class GeneratorCore:
         workspace = config["workspace"]
         container_name = config.get("containerName", config.get("container_name"))
         user_type = config.get("userType", config.get("user_type"))
-        
-        u = "root" if user_type == "root" else username
+        target_platform = self._target_key(config)
+
         d = self._cfg["distros"][distro]
-        
-        package_names = self._visible_package_names(packages)
-        tool_labels = [self._cfg["tools"].get(tool, {}).get("label", tool) for tool in tools]
-        gpu_note = ""
+        target = self._target_platform(target_platform)
+        warnings = config.get("warnings", [])
+
+        notes = []
         if "cuda" in packages or "tensorrt" in packages:
-            gpu_note = """
-## GPU Requirements
-- CUDA / TensorRT selections assume you intend to run on an NVIDIA-capable host
-- The host must already have working NVIDIA drivers and NVIDIA Container Toolkit/runtime configured
-- **Hybrid GPUs (Laptop):** On some laptops, OpenGL may fall back to CPU rendering. If RViz or Gazebo are slow, ensure the host is using NVIDIA as the primary GPU (e.g., `sudo prime-select nvidia`) or configure PRIME offloading.
-- If the host NVIDIA stack is not ready, `docker compose up -d` may fail before the container starts
+            notes.append("NVIDIA GPU support requires working host drivers and NVIDIA Container Toolkit/runtime.")
+        if target.get("jetson"):
+            notes.append("Jetson targets must be run on Jetson hardware with JetPack and NVIDIA Container Runtime installed.")
+            notes.append("Validate CUDA/TensorRT workloads on the target Jetson hardware.")
+        notes.extend(warnings)
+        notes_block = ""
+        if notes:
+            notes_block = "## Notes\n" + "".join(f"- {note}\n" for note in notes) + "\n"
+
+        cross_build_note = ""
+        if target.get("arch") == "arm64":
+            cross_build_note = f"""## Build ARM64 Image
+```bash
+docker buildx create --use --name ros2-arm64-builder || docker buildx use ros2-arm64-builder
+docker buildx build --platform {target.get('docker_platform', 'linux/arm64')} -t {container_name}:arm64 --load .
+```
 
 """
+
+        pkgs_str = ", ".join(packages) if packages else "none"
+        tools_str = ", ".join(tools) if tools else "none"
+        u = f"{username} ({user_type})"
 
         return f"""# ROS2 {d['label']} Docker Environment
 
@@ -447,16 +537,15 @@ Generated by **ros2-dockergen v{self._cfg['version']}**
 | | |
 |---|---|
 | **ROS2 Distro** | {distro} ({variant}) |
-| **Packages** | {", ".join(package_names) if package_names else "none"} |
-| **Dev Tools** | {", ".join(tool_labels)} |
+| **Packages** | {pkgs_str} |
+| **Dev Tools** | {tools_str} |
 | **User** | {u} |
 | **Workspace** | {workspace} |
 
 ## Prerequisites
 - Docker Engine ≥ 24 / Docker Desktop
 - docker compose v2
-
-{gpu_note}## Quick Start
+{notes_block}{cross_build_note}## Run
 ```bash
 docker compose build
 docker compose up -d
@@ -469,8 +558,6 @@ source install/setup.bash
 docker compose down
 ```
 
-This setup mounts the current directory into `{workspace}` so you can build existing repo files in place.
-
 ---
 *Generated by ros2-dockergen v{self._cfg['version']}*
 """
@@ -478,6 +565,10 @@ This setup mounts the current directory into `{workspace}` so you can build exis
     def get_distros(self):
         return [{"value": k, "label": v["label"], "ubuntu": v["ubuntu"], "recommended": v.get("recommended", False), "is_lts": v.get("is_lts", False)} 
                 for k, v in self._cfg["distros"].items()]
+
+    def get_target_platforms(self):
+        return [{"value": k, "label": v["label"], "description": v["description"], "default_distro": v.get("default_distro"), "arch": v.get("arch", "amd64")} 
+                for k, v in self._cfg.get("target_platforms", {}).items()]
 
     def get_variants(self):
         return [{"value": k, "label": v["label"], "description": v["description"]} 

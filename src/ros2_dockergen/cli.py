@@ -352,6 +352,15 @@ def _package_choices(checked: set[str] | None = None) -> list[dict]:
         for p in _CORE.get_ros_package_choices()
     ]
 
+def _package_choices_for_target(target_platform: str, checked: set[str] | None = None) -> list[dict]:
+    blocked = set(_CONFIG_DATA.get("target_platforms", {})
+                  .get(target_platform, {})
+                  .get("blocks_packages", []))
+    choices = _package_choices(checked)
+    if blocked:
+        return [c for c in choices if c["value"] not in blocked]
+    return choices
+
 def _tool_choices(checked: set[str] | None = None) -> list[dict]:
     checked = checked or set()
     return [
@@ -363,7 +372,7 @@ def _tool_choices(checked: set[str] | None = None) -> list[dict]:
 
 def _host_os_choices() -> list[dict]:
     return [
-        {"value": k, "name": f"{v['label'].ljust(11)} — {v['description']}"}
+        {"value": k, "name": f"{v['label'].ljust(28)} — {v['description']}"}
         for k, v in _CONFIG_DATA["host_os"].items()
     ]
 
@@ -374,11 +383,13 @@ def _print_done(cfg: dict, abs_out: Path) -> None:
     packages = cfg["packages"]
     tools    = cfg["tools"]
     has_cuda = "cuda" in packages or "tensorrt" in packages
+    target = _CONFIG_DATA.get("target_platforms", {}).get(cfg.get("target_platform", "amd64"), {})
 
     print(f"\n{SEP}")
     print(bold("  ✅  Files generated"))
     print(SEP)
     print(f"  {dim('Distro   ')}  {green(cfg['distro'])} / {green(cfg['variant'])}")
+    print(f"  {dim('Target   ')}  {green(target.get('label', cfg.get('target_platform', 'amd64')))}")
     print(f"  {dim('Host OS  ')}  {green(cfg['host_os'])}")
     print(f"  {dim('User     ')}  "
           + (yellow("root") if cfg["user_type"] == "root"
@@ -387,6 +398,8 @@ def _print_done(cfg: dict, abs_out: Path) -> None:
     print(f"  {dim('Container')}  {cfg['container_name']}")
     if has_cuda:
         print(f"  {dim('GPU      ')}  {magenta('CUDA / NVIDIA')}")
+    elif target.get("nvidia_runtime"):
+        print(f"  {dim('GPU      ')}  {magenta('Jetson NVIDIA runtime')}")
     if packages:
         print(f"  {dim('Packages ')}  {_summarise(sorted(packages), 8)}")
     if tools:
@@ -430,14 +443,16 @@ def _wizard() -> None:
     detected_os = _detect_os()
     choices = _host_os_choices()
     host_os = _select_one(
-        "Which host operating system?",
-        f"Used to configure GUI/X11 forwarding. Detected: {bold(detected_os)}",
+        "Which host operating system or device?",
+        f"Configures GUI/display forwarding and target architecture. Detected: {bold(detected_os)}",
         choices,
     )
+    target_platform = _CONFIG_DATA.get("host_os", {}).get(host_os, {}).get("target_platform", "amd64")
     _selections["host_os"] = host_os
     _draw_panel(4)
 
     package_defaults = set(_CORE.resolve_config({
+        "target_platform": target_platform,
         "distro": distro,
         "variant": variant,
         "host_os": host_os,
@@ -447,12 +462,13 @@ def _wizard() -> None:
     sel_pkgs = _select_many(
         "Which ROS2 packages to install?",
         "Installed via apt. Select none to start with a clean base.",
-        _package_choices(package_defaults),
+        _package_choices_for_target(target_platform, package_defaults),
     )
     _selections["packages"] = sel_pkgs
     _draw_panel(5)
 
     tool_defaults = set(_CORE.resolve_config({
+        "target_platform": target_platform,
         "distro": distro,
         "variant": variant,
         "host_os": host_os,
@@ -529,6 +545,7 @@ def _wizard() -> None:
     _selections["output"] = output_dir
 
     raw_cfg = {
+        "target_platform": target_platform,
         "distro":         distro,
         "variant":        variant,
         "host_os":        host_os,
@@ -540,6 +557,7 @@ def _wizard() -> None:
     resolved = _CORE.resolve_config(raw_cfg)
     
     cfg = {
+        "target_platform": target_platform,
         "distro":         distro,
         "variant":        variant,
         "host_os":        host_os,
@@ -550,6 +568,7 @@ def _wizard() -> None:
         "uid":            uid,
         "workspace":      workspace,
         "container_name": container_name,
+        "warnings":       resolved.get("warnings", []),
     }
 
     abs_out = Path(output_dir).resolve()

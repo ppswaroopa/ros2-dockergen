@@ -68,6 +68,8 @@ run_smoke() {
 run_smoke "humble-base" --distro humble --variant ros-base
 run_smoke "jazzy-desktop" --distro jazzy --variant desktop
 run_smoke "kilted-root" --distro kilted --variant ros-base --usertype root
+run_smoke "pi-arm64-jazzy" --host-os raspberry-pi-arm64 --distro jazzy --variant desktop
+run_smoke "jetson-orin-experimental" --host-os jetson-orin-jetpack6-arm64 --distro jazzy --variant desktop --packages "cuda,tensorrt"
 run_smoke "kitchen-sink" --distro humble --variant desktop-full --packages "nav2,rviz2,gazebo" --tools "colcon,rosdep,git,cmake,sudo"
 
 success "Generator smoke tests passed (Outputs in ${SMOKE_DIR})."

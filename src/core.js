@@ -38,6 +38,7 @@ function visiblePackageNames(packages) {
 export function defaultUsername() { requireConfig(); return CFG.defaults.username; }
 export function defaultUid() { requireConfig(); return CFG.defaults.uid; }
 export function defaultUserType() { requireConfig(); return CFG.defaults.user_type; }
+export function defaultTargetPlatform() { requireConfig(); return CFG.defaults.target_platform || 'amd64'; }
 export function defaultWorkspace(username, userType) {
     requireConfig();
     const template = userType === 'root' ? CFG.defaults.root_workspace : CFG.defaults.user_workspace;
@@ -53,19 +54,39 @@ export function defaultContainerName(distro) {
 /** Initialize with the parsed config object */
 export function init(parsedConfig) { CFG = parsedConfig; }
 
+function targetKey(config) {
+    if (config.targetPlatform || config.target_platform) return config.targetPlatform || config.target_platform;
+    const host = config.hostOs || config.host_os;
+    const hostCfg = host && CFG.host_os ? CFG.host_os[host] : null;
+    return (hostCfg && hostCfg.target_platform) || 'amd64';
+}
+
+function targetPlatform(configOrKey = 'amd64') {
+    const key = typeof configOrKey === 'object' ? targetKey(configOrKey) : configOrKey;
+    return (CFG.target_platforms && CFG.target_platforms[key]) || (CFG.target_platforms && CFG.target_platforms.amd64) || {};
+}
+
+function isJetsonTargetKey(key) {
+    return Boolean(targetPlatform(key).jetson);
+}
+
 /** 
  * Resolve the base image tag 
  * @returns {string} e.g. "ros:jazzy-ros-base" or "nvidia/cuda:..."
  */
-export function getBaseImage(distro, variant, hasCuda) {
+export function getBaseImage(distro, variant, hasCuda, target = 'amd64') {
     requireConfig();
     const d = CFG.distros[distro];
     if (!d) throw new Error(`Unknown distro: ${distro}`);
-    if (hasCuda) {
+    const targetCfg = targetPlatform(target);
+    if (hasCuda && !targetCfg.jetson) {
         return sub(CFG.cuda_base_image, {
             cuda_version: d.cuda_version,
             ubuntu_image_suffix: d.ubuntu_image_suffix,
         });
+    }
+    if (targetCfg.force_ros_base_for_variants) {
+        return sub(CFG.variants['ros-base'].base_image, { distro });
     }
     const v = CFG.variants[variant];
     if (!v) throw new Error(`Unknown variant: ${variant}`);
@@ -73,10 +94,12 @@ export function getBaseImage(distro, variant, hasCuda) {
 }
 
 /** Resolve ROS package key to apt package names */
-export function resolveRosPackageApt(pkgKey, distro) {
+export function resolveRosPackageApt(pkgKey, distro, target = 'amd64') {
     requireConfig();
     const pkg = CFG.ros_packages[pkgKey];
     if (!pkg) return [];
+    const targetCfg = targetPlatform(target);
+    if (targetCfg.jetson && pkg.jetson_apt) return subAll(pkg.jetson_apt, { distro });
     if (pkg.apt_by_distros) {
         if (!(distro in pkg.apt_by_distros)) {
             throw new Error(`Package ${pkgKey} is not supported on distro ${distro}`);
@@ -103,6 +126,23 @@ export function resolveConfig(config) {
     const variant = res.variant;
     const packages = new Set(res.packages || []);
     const tools = new Set(res.tools || []);
+    const currentTargetKey = targetKey(res);
+    const currentTarget = targetPlatform(currentTargetKey);
+    const warnings = [...(res.warnings || [])];
+
+    if (currentTarget.blocks_packages) {
+        const removed = currentTarget.blocks_packages.filter(pkg => packages.has(pkg));
+        currentTarget.blocks_packages.forEach(pkg => packages.delete(pkg));
+        if (removed.length) {
+            const labels = visiblePackageNames(removed).join(', ');
+            warnings.push(`${currentTarget.label || currentTargetKey} does not support ${labels}; removed from the generated config.`);
+        }
+    }
+
+    const tier1 = currentTarget.tier1_distros || currentTarget.supported_distros || [];
+    if (tier1.length && !tier1.includes(distro)) {
+        warnings.push(currentTarget.experimental_warning || `${distro} is experimental on ${currentTarget.label || currentTargetKey}.`);
+    }
 
     // 1. Variant Implications
     const vCfg = CFG.variants[variant] || {};
@@ -124,19 +164,32 @@ export function resolveConfig(config) {
     }
     if (hasGuiPkg) tools.add('x11');
 
-    res.packages = Array.from(packages);
-    res.tools = Array.from(tools);
+    res.packages = Array.from(packages).sort();
+    res.tools = Array.from(tools).sort();
+    res.target_platform = currentTargetKey;
+    res.warnings = warnings;
     return res;
+}
+
+function variantUpgradeApt(distro, variant, target) {
+    const targetCfg = targetPlatform(target);
+    if (variant === 'ros-base') return [];
+    if (targetCfg.force_ros_base_for_variants) return [`ros-${distro}-${variant}`];
+    if (variant === 'desktop-full') return subAll(CFG.variants['desktop-full'].extra_apt, { distro });
+    return [];
 }
 
 /** Build Dockerfile content */
 export function buildDockerfile(config) {
     requireConfig();
     const { distro, variant, packages, tools, username, uid, workspace, userType } = config;
+    const currentTargetKey = targetKey(config);
+    const currentTarget = targetPlatform(currentTargetKey);
     const isRoot = userType === 'root';
     const pkgsSet = new Set(packages);
     const toolsSet = new Set(tools);
     const hasCuda = pkgsSet.has('cuda') || pkgsSet.has('tensorrt');
+    const hasNvidiaRuntime = hasCuda || Boolean(currentTarget.nvidia_runtime);
     const d = CFG.distros[distro];
     const vars = { distro, cuda_version: d.cuda_version, ubuntu_image_suffix: d.ubuntu_image_suffix };
 
@@ -149,10 +202,10 @@ export function buildDockerfile(config) {
     ln(`# Generated by ros2-dockergen v${CFG.version}`);
     ln(`# =============================================================`);
     gap();
-    ln(`FROM ${getBaseImage(distro, variant, hasCuda)}`);
+    ln(`FROM ${getBaseImage(distro, variant, hasCuda, currentTargetKey)}`);
     gap();
 
-    if (hasCuda) {
+    if (hasCuda && !currentTarget.jetson) {
         ln(`# ── Install ROS2 on top of CUDA base ───────────────────────`);
         ln(`ENV DEBIAN_FRONTEND=noninteractive`);
         ln(`RUN apt-get update && apt-get install -y \\`);
@@ -171,11 +224,11 @@ export function buildDockerfile(config) {
     ln(`SHELL ["/bin/bash", "-c"]`);
     gap();
 
-    if (!hasCuda && variant === 'desktop-full') {
-        const extra = subAll(CFG.variants['desktop-full'].extra_apt, { distro });
-        ln(`# ── Upgrade to desktop-full ─────────────────────────────────`);
+    const variantApt = variantUpgradeApt(distro, variant, currentTargetKey);
+    if (!(hasCuda && !currentTarget.jetson) && variantApt.length) {
+        ln(`# ── Upgrade to ${variant} ─────────────────────────────────────`);
         ln(`RUN apt-get update && apt-get install -y \\`);
-        extra.forEach(p => ln(`    ${p} \\`));
+        variantApt.forEach(p => ln(`    ${p} \\`));
         ln(`    && rm -rf /var/lib/apt/lists/*`);
         gap();
     }
@@ -222,7 +275,7 @@ export function buildDockerfile(config) {
     }
 
     const rosApt = [];
-    for (const pkgKey of pkgsSet) rosApt.push(...resolveRosPackageApt(pkgKey, distro));
+    for (const pkgKey of pkgsSet) rosApt.push(...resolveRosPackageApt(pkgKey, distro, currentTargetKey));
     if (rosApt.length > 0) {
         ln(`# ── ROS2 packages ────────────────────────────────────────────`);
         ln(`RUN apt-get update && apt-get install -y \\`);
@@ -312,8 +365,9 @@ export function buildDockerfile(config) {
         }
     }
 
-    if (hasCuda) {
-        ln(`# ── NVIDIA GPU runtime ──────────────────────────────────────`);
+    if (hasNvidiaRuntime) {
+        const title = currentTarget.jetson ? 'Jetson NVIDIA runtime' : 'NVIDIA GPU runtime';
+        ln(`# ── ${title} ─────────────────────────────────────`);
         ln(`ENV NVIDIA_VISIBLE_DEVICES=all`);
         ln(`ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics`);
         gap();
@@ -327,11 +381,14 @@ export function buildDockerfile(config) {
 export function buildCompose(config) {
     requireConfig();
     const { distro, packages, tools, workspace, containerName, userType, hostOs } = config;
+    const currentTargetKey = targetKey(config);
+    const currentTarget = targetPlatform(currentTargetKey);
     const currentHostOs = hostOs || config.host_os || 'linux';
     const isRoot = userType === 'root';
     const pkgsSet = new Set(packages);
     const toolsSet = new Set(tools);
     const hasCuda = pkgsSet.has('cuda') || pkgsSet.has('tensorrt');
+    const hasNvidiaRuntime = hasCuda || Boolean(currentTarget.nvidia_runtime);
 
     const L = [];
     const ln = s => L.push(s);
@@ -346,6 +403,7 @@ export function buildCompose(config) {
     ln(`    image: ros2-${distro}-${containerName}:latest`);
     ln(`    container_name: ${containerName}`);
     ln(`    hostname: ${containerName}`);
+    if (currentTarget.arch === 'arm64' && currentTarget.docker_platform) ln(`    platform: ${currentTarget.docker_platform}`);
     ln(`    stdin_open: true`);
     ln(`    tty: true`);
     ln(`    restart: unless-stopped`);
@@ -367,7 +425,7 @@ export function buildCompose(config) {
         }
     }
 
-    if (hasCuda) {
+    if (hasNvidiaRuntime) {
         ln(`      - __GLX_VENDOR_LIBRARY_NAME=nvidia`);
     }
 
@@ -392,7 +450,7 @@ export function buildCompose(config) {
         }
     }
 
-    if (hasCuda) {
+    if (hasNvidiaRuntime) {
         ln(`    runtime: nvidia`);
     }
     return L.join('\n');
@@ -402,19 +460,34 @@ export function buildCompose(config) {
 export function buildReadme(config) {
     requireConfig();
     const { distro, variant, packages, tools, username, workspace, containerName, userType } = config;
+    const currentTargetKey = targetKey(config);
+    const currentTarget = targetPlatform(currentTargetKey);
     const pkgsSet = new Set(packages);
-    const u = userType === 'root' ? 'root' : username;
     const d = CFG.distros[distro];
-    const pkgsStr = visiblePackageNames(pkgsSet).join(', ') || 'none';
-    const toolsStr = [...tools].map(t => (CFG.tools[t] || t).label || t).join(', ');
-    const gpuNote = (pkgsSet.has('cuda') || pkgsSet.has('tensorrt')) ? `
-## GPU Requirements
-- CUDA / TensorRT selections assume you intend to run on an NVIDIA-capable host
-- The host must already have working NVIDIA drivers and NVIDIA Container Toolkit/runtime configured
-- **Hybrid GPUs (Laptop):** On some laptops, OpenGL may fall back to CPU rendering. If RViz or Gazebo are slow, ensure the host is using NVIDIA as the primary GPU (e.g., \`sudo prime-select nvidia\`) or configure PRIME offloading.
-- If the host NVIDIA stack is not ready, \`docker compose up -d\` may fail before the container starts
+
+    const notes = [];
+    if (pkgsSet.has('cuda') || pkgsSet.has('tensorrt')) {
+        notes.push('NVIDIA GPU support requires working host drivers and NVIDIA Container Toolkit/runtime.');
+    }
+    if (currentTarget.jetson) {
+        notes.push('Jetson targets must be run on Jetson hardware with JetPack and NVIDIA Container Runtime installed.');
+        notes.push('Validate CUDA/TensorRT workloads on the target Jetson hardware.');
+    }
+    notes.push(...(config.warnings || []));
+    const notesBlock = notes.length
+        ? `## Notes\n${notes.map(note => `- ${note}`).join('\n')}\n\n`
+        : '';
+    const crossBuildNote = currentTarget.arch === 'arm64' ? `## Build ARM64 Image
+\`\`\`bash
+docker buildx create --use --name ros2-arm64-builder || docker buildx use ros2-arm64-builder
+docker buildx build --platform ${currentTarget.docker_platform || 'linux/arm64'} -t ${containerName}:arm64 --load .
+\`\`\`
 
 ` : '';
+
+    const pkgsStr = packages.length ? packages.join(', ') : 'none';
+    const toolsStr = tools.length ? tools.join(', ') : 'none';
+    const u = `${username} (${userType})`;
 
     return `# ROS2 ${d.label} Docker Environment
 
@@ -432,8 +505,7 @@ Generated by **ros2-dockergen v${CFG.version}**
 ## Prerequisites
 - Docker Engine ≥ 24 / Docker Desktop
 - docker compose v2
-
-${gpuNote}## Quick Start
+${notesBlock}${crossBuildNote}## Run
 \`\`\`bash
 docker compose build
 docker compose up -d
@@ -445,8 +517,6 @@ source install/setup.bash
 
 docker compose down
 \`\`\`
-
-This setup mounts the current directory into \`${workspace}\` so you can build existing repo files in place.
 
 ---
 *Generated by ros2-dockergen v${CFG.version}*
@@ -460,6 +530,24 @@ export function getDistros() {
     return Object.entries(CFG.distros).map(([key, d]) => ({
         value: key, label: d.label, ubuntu: d.ubuntu, recommended: d.recommended, is_lts: d.is_lts,
     }));
+}
+
+export function getTargetPlatformChoices() {
+    requireConfig();
+    return Object.entries(CFG.target_platforms || {}).map(([key, p]) => ({
+        value: key, label: p.label, description: p.description, defaultDistro: p.default_distro, arch: p.arch || 'amd64',
+    }));
+}
+
+export function getSupportedDistrosForTarget(target = 'amd64') {
+    requireConfig();
+    const p = targetPlatform(target);
+    return p.supported_distros || Object.keys(CFG.distros);
+}
+
+export function isJetsonTarget(target = 'amd64') {
+    requireConfig();
+    return isJetsonTargetKey(target);
 }
 
 export function getVariants() {
@@ -486,7 +574,7 @@ export function getToolChoices() {
 export function getHostOsChoices() {
     requireConfig();
     return Object.entries(CFG.host_os).map(([key, o]) => ({
-        value: key, label: o.label, description: o.description,
+        value: key, label: o.label, description: o.description, targetPlatform: o.target_platform || 'amd64',
     }));
 }
 
@@ -495,8 +583,9 @@ export function getHostOsChoices() {
 if (typeof window !== 'undefined') {
     window.ROS2_DOCKER_GEN_CORE = {
         init, getBaseImage, buildDockerfile, buildCompose, buildReadme,
-        getDistros, getVariants, getRosPackageChoices, getToolChoices, getHostOsChoices,
-        defaultUsername, defaultUid, defaultUserType, defaultWorkspace, defaultContainerName,
+        getDistros, getTargetPlatformChoices, getSupportedDistrosForTarget, isJetsonTarget,
+        getVariants, getRosPackageChoices, getToolChoices, getHostOsChoices,
+        defaultUsername, defaultUid, defaultUserType, defaultTargetPlatform, defaultWorkspace, defaultContainerName,
         resolveConfig
     };
 }

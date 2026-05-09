@@ -37,7 +37,8 @@ curl -fsSL https://raw.githubusercontent.com/ppswaroopa/ros2-dockergen/main/inst
 ## Features
 
 - **Full Distribution Support**: Choose between **Jazzy**, **Humble**, and **Kilted** ROS2 distros.
-- **GPU Acceleration**: Automatically configures `nvidia/cuda` base images and runtime capabilities if CUDA or TensorRT is selected.
+- **ARM64 Targets**: Generate platform-aware configs for Raspberry Pi 64-bit and NVIDIA Jetson ARM64 targets, including buildx-friendly output.
+- **GPU Acceleration**: Configures `nvidia/cuda` images for amd64 NVIDIA builds and Jetson NVIDIA runtime wiring for Jetson ARM64 targets.
 - **User Choice**: Handles **non-root user** creation with automatic UID/GID mapping to prevent host volume permission headaches.
 - **Comprehensive Tooling**: Toggle common ROS2 packages (Nav2, MoveIt2, SLAM Toolbox, MoveIt, Gazebo GZ, etc.) and dev tools (colcon, rosdep, Oh-My-Zsh, SSH, X11).
 - **Complete Output**: Generates not just a `Dockerfile`, but also a matching `docker-compose.yml` and a workspace-specific `README.md` with instructions.
@@ -51,7 +52,9 @@ Simply run:
 ```bash
 ros2-dockergen
 ```
-The interactive wizard will walk you through 8 steps to configure your environment.
+The interactive wizard will walk you through the ROS2 base image, host OS/device, packages, tools, user, workspace, and output settings.
+
+ARM64 output is available by selecting Raspberry Pi 64-bit or NVIDIA Jetson as the host/device option.
 
 ### Command Line Options
 ```bash

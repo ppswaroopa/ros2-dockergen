@@ -70,6 +70,37 @@ def main():
     gazebo_dockerfile = core.build_dockerfile(gazebo_cfg)
     gazebo_compose = core.build_compose(gazebo_cfg)
 
+    pi_cfg = core.resolve_config({
+        "host_os": "raspberry-pi-arm64",
+        "distro": "jazzy",
+        "variant": "desktop",
+        "packages": ["cuda", "tensorrt"],
+        "tools": ["colcon", "rosdep", "python3", "git", "locale", "bashrc"],
+        "user_type": "user",
+        "username": "pi",
+        "uid": 1000,
+        "workspace": "/home/pi/ros2_ws",
+        "container_name": "ros2-pi",
+    })
+    jetson_cfg = core.resolve_config({
+        "host_os": "jetson-orin-jetpack6-arm64",
+        "distro": "jazzy",
+        "variant": "desktop",
+        "packages": ["cuda", "tensorrt"],
+        "tools": ["colcon", "rosdep", "python3", "git", "locale", "bashrc"],
+        "user_type": "user",
+        "username": "jetson",
+        "uid": 1000,
+        "workspace": "/home/jetson/ros2_ws",
+        "container_name": "ros2-jetson",
+    })
+    pi_dockerfile = core.build_dockerfile(pi_cfg)
+    pi_compose = core.build_compose(pi_cfg)
+    pi_readme = core.build_readme(pi_cfg)
+    jetson_dockerfile = core.build_dockerfile(jetson_cfg)
+    jetson_compose = core.build_compose(jetson_cfg)
+    jetson_readme = core.build_readme(jetson_cfg)
+
     if core.default_container_name("jazzy") != "ros2-jazzy":
         raise AssertionError("default container name should resolve to ros2-jazzy")
 
@@ -105,10 +136,27 @@ def main():
     if zsh_idx < user_idx:
         raise AssertionError("dockerfile: Oh My Zsh install must happen after USER ros-dev")
 
-    assert_contains(readme, "This setup mounts the current directory into `/home/ros-dev/ros2_ws`", "readme")
-    assert_contains(readme, "## GPU Requirements", "readme")
-    assert_contains(readme, "| **Packages** | CUDA, cv_bridge, CycloneDDS, TensorRT |", "readme package summary")
-    assert_contains(root_readme, "| **User** | root |", "root readme")
+    assert_contains(readme, "## Run", "readme run heading")
+    assert_contains(readme, "## Notes", "readme notes")
+    assert_contains(readme, "## What's Inside", "readme should have what's inside table")
+    assert_contains(root_readme, "docker exec -it ros2-humble bash", "root readme run command")
+    assert_contains(pi_dockerfile, "FROM ros:jazzy-ros-base", "pi dockerfile base")
+    assert_contains(pi_dockerfile, "    ros-jazzy-desktop \\", "pi desktop apt upgrade")
+    assert_contains(pi_compose, "    platform: linux/arm64", "pi compose platform")
+    assert_not_contains(pi_dockerfile, "nvidia/cuda", "pi should not use cuda base")
+    assert_not_contains(pi_compose, "runtime: nvidia", "pi should not use nvidia runtime")
+    if {"cuda", "tensorrt"} & set(pi_cfg["packages"]):
+        raise AssertionError("raspberry pi target should remove NVIDIA packages")
+    assert_contains(pi_readme, "## Build ARM64 Image", "pi readme cross build")
+
+    assert_contains(jetson_dockerfile, "FROM ros:jazzy-ros-base", "jetson dockerfile base")
+    assert_contains(jetson_dockerfile, "ENV NVIDIA_VISIBLE_DEVICES=all", "jetson nvidia env")
+    assert_contains(jetson_compose, "    platform: linux/arm64", "jetson compose platform")
+    assert_contains(jetson_compose, "    runtime: nvidia", "jetson compose runtime")
+    assert_not_contains(jetson_dockerfile, "nvidia/cuda", "jetson should not use generic cuda base")
+    assert_contains(jetson_readme, "## Notes", "jetson notes")
+    assert_contains(jetson_readme, "JetPack 6 is Ubuntu 22.04 based", "jetson warning text")
+    assert_contains(jetson_readme, "## Build ARM64 Image", "jetson cross build")
 
     bad_cfg = copy.deepcopy(cfg)
     del bad_cfg["ros_packages"]["tensorrt"]["apt_by_distros"]["jazzy"]

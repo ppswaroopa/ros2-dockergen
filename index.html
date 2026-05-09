@@ -339,6 +339,19 @@
             box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.2) inset;
         }
 
+        .option-card.disabled,
+        .radio-card.disabled {
+            opacity: 0.42;
+            cursor: not-allowed;
+            filter: grayscale(0.5);
+        }
+
+        .option-card.disabled:hover,
+        .radio-card.disabled:hover {
+            border-color: var(--border);
+            background: var(--surface);
+        }
+
         .option-card.selected::before {
             transform: scaleX(1);
         }
@@ -895,10 +908,44 @@
             font-size: 12px;
             color: var(--text-dim);
             line-height: 1.6;
+            width: 100%;
         }
 
         .warn-box-text strong {
             color: var(--orange);
+        }
+
+        .warn-box-text p {
+            margin: 0;
+        }
+
+        .warn-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .warn-chip {
+            border: 1px solid rgba(255, 107, 53, 0.28);
+            background: rgba(255, 107, 53, 0.08);
+            color: var(--text);
+            padding: 4px 8px;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .warn-chip.muted {
+            border-color: rgba(148, 163, 184, 0.2);
+            background: rgba(148, 163, 184, 0.06);
+            color: var(--text-dim);
+        }
+
+        .warn-chip.active {
+            border-color: rgba(255, 107, 53, 0.55);
+            background: rgba(255, 107, 53, 0.16);
+            color: var(--orange);
+            box-shadow: 0 0 0 1px rgba(255, 107, 53, 0.12) inset;
         }
 
         /* DIVIDER */
@@ -1202,9 +1249,9 @@
             <div class="section-header">
                 <div class="section-tag">Step 01 — Foundation</div>
                 <div class="section-title">Choose your ROS2 Distribution</div>
-                <div class="section-desc">Each distro has different support timelines. Humble is the current LTS
-                    (supported
-                    until 2027). Jazzy is the latest LTS. Kilted is the newest release.</div>
+                <div class="section-desc">Each distro has different support timelines and Ubuntu bases. Your Host OS
+                    choice below also sets the architecture, so Raspberry Pi and Jetson targets automatically generate
+                    ARM64 and cross-build friendly output.</div>
             </div>
 
             <div class="divider-label">ROS2 Distribution</div>
@@ -1237,10 +1284,9 @@
             <div class="divider-label">Host Operating System</div>
             <div class="info-box">
                 <div class="info-box-icon">🖥️</div>
-                <div class="info-box-text">Selecting your <strong>Host OS</strong> ensures the generated
-                    docker-compose file has the correct volumes and environment variables for <strong>GUI/X11
-                        forwarding</strong> (e.g., WSLg for Windows 11).
-                </div>
+                <div class="info-box-text">Selecting your <strong>Host OS</strong> configures GUI/display forwarding
+                    and the target architecture. Linux and Windows generate amd64 output; Raspberry Pi and Jetson
+                    options generate ARM64 output with cross-build commands.</div>
             </div>
             <div class="radio-grid" id="host-os-grid">
                 <!-- Dynamically populated -->
@@ -1444,11 +1490,12 @@
             <div class="divider-label">GPU & Accelerated Computing</div>
             <div class="warn-box">
                 <div class="info-box-icon">⚠️</div>
-                <div class="warn-box-text"><strong>GPU packages require NVIDIA drivers on your host</strong> +
-                    the
-                    NVIDIA
-                    Container Toolkit. Without these, the container won't start. Only select if you have an
-                    NVIDIA GPU.
+                <div class="warn-box-text">
+                    <p><strong>NVIDIA acceleration requires host support.</strong> CUDA and TensorRT work when the target system has NVIDIA drivers with the NVIDIA Container Toolkit/runtime configured.</p>
+                    <div class="warn-chip-row">
+                        <span class="warn-chip">NVIDIA GPU required</span>
+                        <span class="warn-chip muted" id="raspi-gpu-warning-chip">Not supported in Raspberry Pi</span>
+                    </div>
                 </div>
             </div>
             <div class="options-grid">
@@ -1960,6 +2007,7 @@
         // STATE
         // ============================================================
         const state = {
+            targetPlatform: 'amd64',
             distro: 'humble',
             variant: 'ros-base',
             hostOs: 'linux',
@@ -1999,10 +2047,11 @@
             if (!grid) return;
             const choices = ROS2_DOCKER_GEN_CORE.getHostOsChoices();
             grid.innerHTML = choices.map(c => `
-                <div class="radio-card ${state.hostOs === c.value ? 'selected' : ''}" data-host-os="${c.value}" onclick="selectHostOs(this)">
+                <div class="radio-card ${state.hostOs === c.value ? 'selected' : ''}" data-host-os="${c.value}" data-target-platform="${c.targetPlatform}" onclick="selectHostOs(this)">
                     <div class="radio-dot"></div>
                     <div class="option-name">${c.label}</div>
                     <div class="option-desc">${c.description}</div>
+                    ${c.targetPlatform && c.targetPlatform !== 'amd64' ? '<div class="option-badge">ARM64</div>' : '<div class="option-badge rec">amd64</div>'}
                 </div>
             `).join('');
         }
@@ -2011,6 +2060,8 @@
             document.querySelectorAll('#host-os-grid .radio-card').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
             state.hostOs = el.dataset.hostOs;
+            state.targetPlatform = el.dataset.targetPlatform || 'amd64';
+            updateTargetAwareUI();
             generateFiles();
         }
 
@@ -2054,6 +2105,7 @@
         // SELECTORS
         // ============================================================
         function selectDistro(el) {
+            if (el.classList.contains('disabled')) return;
             const oldDistro = state.distro;
             document.querySelectorAll('#distro-grid .radio-card').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
@@ -2074,6 +2126,7 @@
         }
 
         function togglePkg(el) {
+            if (el.classList.contains('disabled')) return;
             el.classList.toggle('selected');
             const pkg = el.dataset.pkg;
             if (state.packages.has(pkg)) state.packages.delete(pkg);
@@ -2205,6 +2258,29 @@
             });
         }
 
+        function updateTargetAwareUI() {
+            const supported = window.ROS2_DOCKER_GEN_CORE?.getSupportedDistrosForTarget?.(state.targetPlatform) || ['humble', 'jazzy', 'kilted'];
+            document.querySelectorAll('#distro-grid .radio-card').forEach(el => {
+                const enabled = supported.includes(el.dataset.distro);
+                el.classList.toggle('disabled', !enabled);
+                el.classList.toggle('selected', el.dataset.distro === state.distro);
+            });
+
+            const isRaspberryPi = state.targetPlatform === 'raspberry-pi-arm64';
+            const raspiWarningChip = document.getElementById('raspi-gpu-warning-chip');
+            if (raspiWarningChip) {
+                raspiWarningChip.classList.toggle('active', isRaspberryPi);
+                raspiWarningChip.classList.toggle('muted', !isRaspberryPi);
+            }
+            document.querySelectorAll('.option-card[data-pkg="cuda"], .option-card[data-pkg="tensorrt"]').forEach(el => {
+                el.classList.toggle('disabled', isRaspberryPi);
+                if (isRaspberryPi) {
+                    el.classList.remove('selected');
+                    state.packages.delete(el.dataset.pkg);
+                }
+            });
+        }
+
         function updatePackageArtwork() {
             const gzByDistro = {
                 humble: {
@@ -2249,6 +2325,7 @@
 
             const rawConfig = {
                 ...state,
+                target_platform: state.targetPlatform,
                 packages: Array.from(state.packages),
                 tools: Array.from(state.tools)
             };
@@ -2276,17 +2353,17 @@
         }
 
         function buildDockerfile() { 
-            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const rawConfig = { ...state, target_platform: state.targetPlatform, packages: Array.from(state.packages), tools: Array.from(state.tools) };
             const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
             return ROS2_DOCKER_GEN_CORE.buildDockerfile(resolved); 
         }
         function buildCompose() { 
-            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const rawConfig = { ...state, target_platform: state.targetPlatform, packages: Array.from(state.packages), tools: Array.from(state.tools) };
             const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
             return ROS2_DOCKER_GEN_CORE.buildCompose(resolved); 
         }
         function buildReadme() { 
-            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const rawConfig = { ...state, target_platform: state.targetPlatform, packages: Array.from(state.packages), tools: Array.from(state.tools) };
             const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
             return ROS2_DOCKER_GEN_CORE.buildReadme(resolved); 
         }
@@ -2302,14 +2379,14 @@
             pills.push({ label: state.variant, cls: '', step: 1 });
             pills.push({ label: `Host: ${state.hostOs}`, cls: '', step: 1 });
             
-            const rawConfig = { ...state, packages: Array.from(state.packages), tools: Array.from(state.tools) };
+            const rawConfig = { ...state, target_platform: state.targetPlatform, packages: Array.from(state.packages), tools: Array.from(state.tools) };
             const resolved = ROS2_DOCKER_GEN_CORE.resolveConfig(rawConfig);
 
             if (resolved.packages.length) pills.push({ label: `${resolved.packages.length} packages`, cls: 'green', step: 2 });
             if (resolved.tools.length) pills.push({ label: `${resolved.tools.length} dev tools`, cls: '', step: 3 });
             if (state.userType !== 'root') pills.push({ label: `user: ${state.username}`, cls: 'green', step: 4 });
             else pills.push({ label: 'root user', cls: 'orange', step: 4 });
-            if (resolved.packages.includes('cuda')) pills.push({ label: 'NVIDIA GPU', cls: 'orange', step: 2 });
+            if (resolved.packages.includes('cuda') || state.targetPlatform.includes('jetson')) pills.push({ label: 'NVIDIA GPU', cls: 'orange', step: 2 });
             if (resolved.tools.includes('x11')) pills.push({ label: 'X11 GUI', cls: '', step: 3 });
 
             el.innerHTML = pills.map(p => `<span class="pill ${p.cls}" onclick="showStep(${p.step}, true)">${p.label}</span>`).join('');
@@ -2423,6 +2500,8 @@
                 const detectedOs = await detectHostOs();
                 state.hostOs = detectedOs;
                 renderHostOsChoices();
+                const selectedHost = document.querySelector('#host-os-grid .radio-card.selected');
+                state.targetPlatform = selectedHost?.dataset.targetPlatform || 'amd64';
 
                 const defaults = config.defaults || {};
                 const defaultTools = (core.getToolChoices?.() || []).filter(tool => tool.default).map(tool => tool.value);
@@ -2448,6 +2527,7 @@
                     el.classList.toggle('on', state.tools.has(el.dataset.tool));
                 });
                 updateSelectUI('Most Popular');
+                updateTargetAwareUI();
 
                 // Dynamic version injection
                 const ver = config.version || "1.2.0";
