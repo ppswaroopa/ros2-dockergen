@@ -58,6 +58,38 @@ The interactive wizard will walk you through 8 steps to configure your environme
 ros2-dockergen --help    # Show help
 ros2-dockergen --version # Show version
 ```
+
+---
+
+## Development Setup
+
+For local CLI development, create a `ros2-dockergen` virtual environment and install the package in editable mode:
+
+```bash
+python3 -m venv ros2-dockergen
+source ros2-dockergen/bin/activate
+pip install -e .
+```
+
+Verify the editable install:
+
+```bash
+ros2-dockergen --help
+```
+
+Run the local test suite:
+
+```bash
+./tests/run_tests.sh
+```
+
+Build the Python package locally:
+
+```bash
+pip install build
+python -m build
+```
+
 ---
 
 ## Local CI With `act`

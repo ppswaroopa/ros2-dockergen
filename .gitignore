@@ -9,7 +9,16 @@ __pycache__/
 *$py.class
 venv/
 .venv/
+env/
+.env/
+ros2-dockergen/
 .pytest_cache/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
 # Docker Generated Outputs
 ros2-jazzy/
@@ -29,9 +38,5 @@ tests/_runner.js
 .DS_Store
 Thumbs.db
 *.swp
-dist/
-venv/
-*.egg-info/
-__pycache__/
 
 act
