@@ -229,6 +229,10 @@ def _select_one(question: str, hint: str, choices: list[dict]) -> str:
 
         idx = int(raw) - 1 if raw.isdigit() else -1
         if 0 <= idx < len(choices):
+            if choices[idx]["value"] is None:
+                _erase_question(q_lines + 1)
+                q_lines = _print("This is a category header. Please select a valid option.")
+                continue
             _erase_question(q_lines + 1)
             return choices[idx]["value"]
         _erase_question(q_lines + 1)
@@ -371,10 +375,18 @@ def _tool_choices(checked: set[str] | None = None) -> list[dict]:
     ]
 
 def _host_os_choices() -> list[dict]:
-    return [
-        {"value": k, "name": f"{v['label'].ljust(28)} — {v['description']}"}
-        for k, v in _CONFIG_DATA["host_os"].items()
-    ]
+    result = []
+    current_group = ""
+    for k, v in _CONFIG_DATA["host_os"].items():
+        group = v.get("group", "")
+        if group and group != current_group:
+            current_group = group
+            result.append({"value": None, "name": bold(f"--- {current_group} ---")})
+        
+        label = v["label"]
+        desc = v["description"]
+        result.append({"value": k, "name": f"{label.ljust(28)} — {desc}"})
+    return result
 
 # -- Final summary -------------------------------------------------------------
 

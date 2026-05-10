@@ -532,6 +532,35 @@
             box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
         }
 
+        .group-header {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 32px 0 12px;
+            margin-bottom: 8px;
+        }
+
+        .group-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--cyan);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            font-weight: 600;
+            background: rgba(0, 212, 255, 0.08);
+            padding: 4px 10px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .group-header::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(to right, var(--border), transparent);
+        }
+
         /* TEXT INPUTS */
         .form-row {
             display: grid;
@@ -1281,7 +1310,7 @@
                 </div>
             </div>
 
-            <div class="divider-label">Host Operating System</div>
+            <div class="divider-label">Host Operating System <span style="text-transform: none; font-weight: normal; opacity: 0.6; margin-left: 10px;">(Choose One)</span></div>
             <div class="info-box">
                 <div class="info-box-icon">🖥️</div>
                 <div class="info-box-text">Selecting your <strong>Host OS</strong> configures GUI/display forwarding
@@ -2046,14 +2075,31 @@
             const grid = document.getElementById('host-os-grid');
             if (!grid) return;
             const choices = ROS2_DOCKER_GEN_CORE.getHostOsChoices();
-            grid.innerHTML = choices.map(c => `
-                <div class="radio-card ${state.hostOs === c.value ? 'selected' : ''}" data-host-os="${c.value}" data-target-platform="${c.targetPlatform}" onclick="selectHostOs(this)">
-                    <div class="radio-dot"></div>
-                    <div class="option-name">${c.label}</div>
-                    <div class="option-desc">${c.description}</div>
-                    ${c.targetPlatform && c.targetPlatform !== 'amd64' ? '<div class="option-badge">ARM64</div>' : '<div class="option-badge rec">amd64</div>'}
-                </div>
-            `).join('');
+            let html = '';
+            let currentGroup = '';
+
+            choices.forEach(c => {
+                if (c.group && c.group !== currentGroup) {
+                    currentGroup = c.group;
+                    html += `
+                        <div class="group-header">
+                            <span class="group-label">${currentGroup}</span>
+                        </div>
+                    `;
+                }
+                html += `
+                    <div class="radio-card ${state.hostOs === c.value ? 'selected' : ''}" 
+                         data-host-os="${c.value}" 
+                         data-target-platform="${c.targetPlatform}" 
+                         onclick="selectHostOs(this)">
+                        <div class="radio-dot"></div>
+                        <div class="option-name">${c.label}</div>
+                        <div class="option-desc">${c.description}</div>
+                        ${c.targetPlatform && c.targetPlatform !== 'amd64' ? '<div class="option-badge">ARM64</div>' : '<div class="option-badge rec">amd64</div>'}
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
         }
 
         function selectHostOs(el) {

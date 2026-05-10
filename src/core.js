@@ -575,6 +575,7 @@ export function getHostOsChoices() {
     requireConfig();
     return Object.entries(CFG.host_os).map(([key, o]) => ({
         value: key, label: o.label, description: o.description, targetPlatform: o.target_platform || 'amd64',
+        group: o.group
     }));
 }
 
