@@ -313,6 +313,42 @@ jobs:
             ros2-kitchen-sink:ci \
             bash /validate.sh
 
+  # ── Cross-Build — Verifies ARM64 builds on Amd64 runners ─────────
+  cross-build-check:
+    name: "Cross-Build · Jetson Thor (ARM64)"
+    needs: changes
+    if: |
+      needs.changes.outputs.generator == 'true' ||
+      github.event.inputs.run_all == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Generate Dockerfile
+        run: |
+          node CI/generate.js \
+            --distro   jazzy \
+            --host-os  jetson-thor-jetpack7-arm64 \
+            --variant  desktop-full \
+            --packages "nav2,rviz2,gazebo" \
+            --tools    "colcon,rosdep,git,cmake,sudo" \
+            --out      ./build-context
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build ARM64 image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./build-context
+          platforms: linux/arm64
+          push: false
+          # We use a smaller cache for cross-builds as they are slow
+          cache-from: type=gha,scope=cross-build-thor
+          cache-to: type=gha,mode=max,scope=cross-build-thor
+
   # ── Final gate — required for branch protection ──────────────
   # This job always runs and checks which of the above actually
   # ran. If something ran and failed, this fails. If a job was
@@ -336,6 +372,7 @@ jobs:
       - gui
       - nvidia
       - kitchen-sink
+      - cross-build-check
 
     steps:
       - name: Check results
@@ -354,6 +391,7 @@ jobs:
           results[gui]="${{ needs.gui.result }}"
           results[nvidia]="${{ needs.nvidia.result }}"
           results[kitchen-sink]="${{ needs.kitchen-sink.result }}"
+          results[cross-build-check]="${{ needs.cross-build-check.result }}"
 
           FAILED=0
           for job in "${!results[@]}"; do
