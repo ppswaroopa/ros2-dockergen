@@ -250,6 +250,18 @@ export function buildDockerfile(config) {
         if (tool && tool.apt.length > 0 && !tool.ros_build_tool) sysApt.push(...tool.apt);
     }
     if (!isRoot) sysApt.push('sudo');
+
+    if (currentTarget.jetson && currentTarget.l4t_repo) {
+        const repo = currentTarget.l4t_repo;
+        ln(`# ── NVIDIA L4T Repository ─────────────────────────────────────`);
+        ln(`RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg && \\`);
+        ln(`    curl -sL ${repo.key_url} | gpg --dearmor -o /usr/share/keyrings/nvidia-l4t-keyring.gpg && \\`);
+        const repoLines = repo.repos.map(r => `echo 'deb [signed-by=/usr/share/keyrings/nvidia-l4t-keyring.gpg] ${r}' >> /etc/apt/sources.list.d/nvidia-l4t.list;`).join(' ');
+        ln(`    ${repoLines} \\`);
+        ln(`    apt-get clean && rm -rf /var/lib/apt/lists/*`);
+        gap();
+    }
+
     ln(`# ── System packages ──────────────────────────────────────────`);
     ln(`RUN apt-get update && apt-get install -y \\`);
     sysApt.forEach(p => ln(`    ${p} \\`));

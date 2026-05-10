@@ -59,6 +59,13 @@
       "nvidia_runtime": true,
       "force_ros_base_for_variants": true,
       "jetson": true,
+      "l4t_repo": {
+        "key_url": "https://repo.download.nvidia.com/jetson/jetson-ota-public.asc",
+        "repos": [
+          "https://repo.download.nvidia.com/jetson/common jammy main",
+          "https://repo.download.nvidia.com/jetson/t234 jammy main"
+        ]
+      },
       "experimental_warning": "JetPack 6 is Ubuntu 22.04 based. Non-Humble ROS distros are experimental on this target and may need Jetson-specific dependency fixes."
     },
     "jetson-thor-jetpack7-arm64": {
@@ -79,6 +86,13 @@
       "nvidia_runtime": true,
       "force_ros_base_for_variants": true,
       "jetson": true,
+      "l4t_repo": {
+        "key_url": "https://repo.download.nvidia.com/jetson/jetson-ota-public.asc",
+        "repos": [
+          "https://repo.download.nvidia.com/jetson/common noble main",
+          "https://repo.download.nvidia.com/jetson/t234 noble main"
+        ]
+      },
       "experimental_warning": "JetPack 7 is Ubuntu 24.04 based. Humble is experimental on this target and may need Jetson-specific dependency fixes."
     }
   },
@@ -362,14 +376,16 @@
     },
     "cuda": {
       "label": "CUDA",
-      "description": "NVIDIA GPU compute — switches amd64 builds to nvidia/cuda; on Jetson it enables NVIDIA runtime expectations",
+      "description": "NVIDIA GPU compute (CUDA Toolkit). On Desktop uses nvidia/cuda base; on Jetson installs via L4T repo.",
       "apt": [],
-      "switches_base_image": true,
-      "_comment": "No apt packages; presence triggers nvidia/cuda base image substitution"
+      "jetson_apt": [
+        "nvidia-cuda"
+      ],
+      "switches_base_image": true
     },
     "tensorrt": {
       "label": "TensorRT",
-      "description": "NVIDIA TensorRT inference engine",
+      "description": "NVIDIA high-performance deep learning inference engine.",
       "apt_by_distros": {
         "humble": [
           "tensorrt",
@@ -384,9 +400,10 @@
           "python3-libnvinfer"
         ]
       },
-      "switches_base_image": true,
-      "jetson_apt": [],
-      "_comment": "Requires the CUDA base image and installs TensorRT from the NVIDIA repo already present in the CUDA image"
+      "jetson_apt": [
+        "nvidia-tensorrt"
+      ],
+      "switches_base_image": true
     }
   },
   "tools": {
