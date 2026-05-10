@@ -24,9 +24,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "**" ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ "**" ]
   workflow_dispatch:
     inputs:
       run_all:
