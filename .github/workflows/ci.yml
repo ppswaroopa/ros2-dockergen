@@ -315,7 +315,7 @@ jobs:
 
   # ── Cross-Build — Verifies ARM64 builds on Amd64 runners ─────────
   cross-build-check:
-    name: "Cross-Build · Jetson Thor (ARM64)"
+    name: "Cross-Build · Jetson Orin (ARM64)"
     needs: changes
     if: |
       needs.changes.outputs.generator == 'true' ||
@@ -329,8 +329,8 @@ jobs:
       - name: Generate Dockerfile
         run: |
           node CI/generate.js \
-            --distro   jazzy \
-            --host-os  jetson-thor-jetpack7-arm64 \
+            --distro   humble \
+            --host-os  jetson-orin-jetpack6-arm64 \
             --variant  desktop-full \
             --packages "nav2,rviz2,gazebo" \
             --tools    "colcon,rosdep,git,cmake,sudo" \

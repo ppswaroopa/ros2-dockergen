@@ -251,7 +251,8 @@ export function buildDockerfile(config) {
     }
     if (!isRoot) sysApt.push('sudo');
 
-    if (currentTarget.jetson && currentTarget.l4t_repo) {
+    const containerUbuntu = CFG.distros[distro].ubuntu;
+    if (currentTarget.jetson && currentTarget.l4t_repo && currentTarget.l4t_repo.ubuntu === containerUbuntu) {
         const repo = currentTarget.l4t_repo;
         ln(`# ── NVIDIA L4T Repository ─────────────────────────────────────`);
         ln(`RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg && \\`);
@@ -490,6 +491,9 @@ export function buildReadme(config) {
         ? `## Notes\n${notes.map(note => `- ${note}`).join('\n')}\n\n`
         : '';
     const crossBuildSection = currentTarget.arch === 'arm64' ? `## Cross-Build for ARM64
+> [!TIP]
+> This generates a **native ARM64** image. Unlike emulated x86 images, this will run at **full hardware speed** on your device, which is essential for low-latency robotics and AI.
+
 If building on an **amd64** Linux host for this target:
 
 1. **Setup QEMU Emulation**:

@@ -60,6 +60,7 @@
       "force_ros_base_for_variants": true,
       "jetson": true,
       "l4t_repo": {
+        "ubuntu": "jammy",
         "key_url": "https://repo.download.nvidia.com/jetson/jetson-ota-public.asc",
         "repos": [
           "https://repo.download.nvidia.com/jetson/common jammy main",
@@ -69,8 +70,8 @@
       "experimental_warning": "JetPack 6 is Ubuntu 22.04 based. Non-Humble ROS distros are experimental on this target and may need Jetson-specific dependency fixes."
     },
     "jetson-thor-jetpack7-arm64": {
-      "label": "NVIDIA Jetson Thor / JetPack 7",
-      "description": "Jetson Thor on JetPack 7.x / Ubuntu 24.04; Jazzy and Kilted match Tier 1 Ubuntu 24.04",
+      "label": "NVIDIA Jetson Thor / JetPack 7 [Experimental]",
+      "description": "PREVIEW: Support for AGX Thor and JetPack 7.x (Ubuntu 24.04). Repositories are currently in early access.",
       "arch": "arm64",
       "docker_platform": "linux/arm64",
       "default_distro": "jazzy",
@@ -86,13 +87,6 @@
       "nvidia_runtime": true,
       "force_ros_base_for_variants": true,
       "jetson": true,
-      "l4t_repo": {
-        "key_url": "https://repo.download.nvidia.com/jetson/jetson-ota-public.asc",
-        "repos": [
-          "https://repo.download.nvidia.com/jetson/common noble main",
-          "https://repo.download.nvidia.com/jetson/t234 noble main"
-        ]
-      },
       "experimental_warning": "JetPack 7 is Ubuntu 24.04 based. Humble is experimental on this target and may need Jetson-specific dependency fixes."
     }
   },

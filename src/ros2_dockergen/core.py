@@ -285,7 +285,9 @@ class GeneratorCore:
             if tool and tool.get("apt") and not tool.get("ros_build_tool"):
                 sys_apt.extend(tool["apt"])
 
-        if target.get("jetson") and target.get("l4t_repo"):
+        # Only inject L4T repo if the container OS matches the repository's target OS
+        container_ubuntu = self._cfg["distros"][distro]["ubuntu"]
+        if target.get("jetson") and target.get("l4t_repo") and target["l4t_repo"].get("ubuntu") == container_ubuntu:
             repo = target["l4t_repo"]
             ln("# ── NVIDIA L4T Repository ─────────────────────────────────────")
             ln("RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg && \\")
@@ -526,6 +528,9 @@ class GeneratorCore:
         cross_build_section = ""
         if target.get("arch") == "arm64":
             cross_build_section = f"""## Cross-Build for ARM64
+> [!TIP]
+> This generates a **native ARM64** image. Unlike emulated x86 images, this will run at **full hardware speed** on your device, which is essential for low-latency robotics and AI.
+
 If building on an **amd64** Linux host for this target:
 
 1. **Setup QEMU Emulation**:
